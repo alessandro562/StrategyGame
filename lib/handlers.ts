@@ -466,10 +466,11 @@ export function applica(ctx: Contesto, azione: Action): void {
       rimuovi(state, azione.payload.tipo, azione.payload.id);
       return;
 
-    // panic.restore e panic.write non passano da qui: agiscono direttamente
-    // sulle chiavi Redis, fuori dal lock ottimistico.
+    // Le azioni di panico non passano da qui: agiscono direttamente sulle
+    // chiavi Redis, fuori dal lock ottimistico.
     case 'panic.restore':
     case 'panic.write':
+    case 'panic.reset':
       return;
 
     // commit.set e commit.confirm scrivono su chiavi separate, non su room:state.

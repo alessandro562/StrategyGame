@@ -6,9 +6,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { _resetRedis } from '@/lib/redis';
 import {
+  azzera,
   caricaCommits,
   caricaStato,
   connessi,
+  elencaBackup,
   firmaPresenza,
   muta,
   registraAzione,
@@ -205,6 +207,44 @@ describe('backup e ripristino', () => {
     expect(state.workshop.nome).toBe('prima del disastro');
     expect(state.servizi.length).toBeGreaterThan(0);
     expect(await caricaCommits()).toHaveLength(1);
+  });
+});
+
+describe('azzeramento', () => {
+  it('riporta la stanza al seed e cancella i commit', async () => {
+    await muta((s) => {
+      s.workshop.nome = 'prova generale';
+      s.lock.push({
+        id: 'lk1', sessioneId: 's', modulo: 'M1', titolo: 'di prova', timestamp: 1,
+        contenuto: null, dissensi: [], riapertoA: null, aValle: [],
+      });
+    });
+    await scriviCommit({
+      sessioneId: 's', partecipanteId: 'p1',
+      payload: { tipo: 'M1', destinazioni: { a1: 'UMANO' } }, confermato: true, aggiornatoA: 1,
+    });
+
+    await azzera();
+
+    const { state } = await caricaStato();
+    expect(state.workshop.nome).toBe('Ritiro WDA — 5/6 agosto 2026');
+    expect(state.lock).toHaveLength(0);
+    expect(state.sessioni).toHaveLength(0);
+    expect(await caricaCommits()).toHaveLength(0);
+    // Il seed torna intero: si riparte da un tavolo utilizzabile, non da vuoto.
+    expect(state.servizi.length).toBeGreaterThan(0);
+    expect(state.competitor.some((c) => c.fisso)).toBe(true);
+  });
+
+  it('lascia uno snapshot da cui tornare indietro', async () => {
+    await muta((s) => {
+      s.workshop.nome = 'da recuperare';
+    });
+    await azzera();
+    const backup = await elencaBackup();
+    expect(backup.length).toBeGreaterThan(0);
+    await ripristina(backup[0]);
+    expect((await caricaStato()).state.workshop.nome).toBe('da recuperare');
   });
 });
 

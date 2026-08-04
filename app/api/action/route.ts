@@ -16,6 +16,7 @@ import { ErroreGuardia, verificaAzione, verificaPid, verificaStanza } from '@/li
 import { applica } from '@/lib/handlers';
 import {
   ConflittoDiScrittura,
+  azzera,
   caricaCommit,
   caricaCommits,
   caricaStato,
@@ -102,6 +103,9 @@ async function esegui(azione: Action, pid: string): Promise<number> {
     /* Modalità panico: agisce sulle chiavi, fuori dal lock ottimistico. */
     case 'panic.restore':
       return ripristina(azione.payload.chiave);
+
+    case 'panic.reset':
+      return azzera();
 
     case 'panic.write': {
       const s = azione.payload.stato as Store;

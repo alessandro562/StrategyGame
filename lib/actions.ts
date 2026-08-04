@@ -55,7 +55,8 @@ export type Action =
   | { type: 'entity.upsert'; payload: { tipo: TipoEntita; dati: Record<string, unknown> } }
   | { type: 'entity.delete'; payload: { tipo: TipoEntita; id: string } }
   | { type: 'panic.restore'; payload: { chiave: string } }
-  | { type: 'panic.write'; payload: { stato: unknown } };
+  | { type: 'panic.write'; payload: { stato: unknown } }
+  | { type: 'panic.reset'; payload: Record<string, never> };
 
 export interface ActionEnvelope {
   actionId: string;
@@ -90,4 +91,5 @@ export const AZIONI_FACILITATORE: ReadonlySet<Action['type']> = new Set<Action['
   'entity.delete',
   'panic.restore',
   'panic.write',
+  'panic.reset',
 ]);

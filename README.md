@@ -74,6 +74,12 @@ BASE=http://127.0.0.1:3000 npm run prova
 
 61 controlli sul ciclo completo contro il server HTTP reale, su una stanza vergine. **Prima di partire per la sede, ripeterla contro il deploy di produzione da rete mobile, con almeno due dispositivi fisici diversi.** È l'unico test che verifica davvero le condizioni del ritiro: un deploy che funziona in ufficio e non in sede è il fallimento più stupido possibile.
 
+```bash
+BASE=https://<progetto>.vercel.app npm run prova
+```
+
+La prova lascia dentro le sue sessioni e i suoi commit — c'è una sola stanza per deploy. Dopo averla eseguita in produzione, **azzerare dal pannello facilitatore → Modalità panico → Riporta tutto al seed**, altrimenti il ritiro comincia con dentro la roba di prova. L'azzeramento prende uno snapshot prima di cancellare, quindi è reversibile.
+
 ---
 
 ## Marchio

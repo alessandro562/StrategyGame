@@ -271,6 +271,8 @@ function ModalitaPanico({ ctx }: { ctx: Contesto }) {
         )}
       </div>
 
+      <AzzeraStanza onAzzera={() => invia('panic.reset', {})} />
+
       <div>
         <div className="etichetta mb-1">editor dello stato</div>
         <div className="flex gap-1 mb-1">
@@ -315,6 +317,46 @@ function ModalitaPanico({ ctx }: { ctx: Contesto }) {
           Scrivi stato
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Serve dopo la prova generale in produzione: senza, il ritiro comincerebbe con
+ * dentro le sessioni di prova. Uno snapshot viene preso prima di azzerare, così
+ * anche un clic sbagliato si annulla dal ripristino qui sopra.
+ */
+function AzzeraStanza({ onAzzera }: { onAzzera: () => void }) {
+  const [conferma, setConferma] = useState(false);
+  return (
+    <div>
+      <div className="etichetta mb-1">azzera la stanza</div>
+      {!conferma ? (
+        <button className="bottone text-[12px]" onClick={() => setConferma(true)}>
+          Riporta tutto al seed
+        </button>
+      ) : (
+        <div className="rialzato p-2 flex flex-col gap-2">
+          <span className="text-[12px]" style={{ color: 'var(--ink-dim)' }}>
+            Cancella sessioni, commit, lock e azioni. Uno snapshot viene salvato prima, ed è ripristinabile.
+          </span>
+          <div className="flex gap-1">
+            <button
+              className="bottone text-[12px]"
+              style={{ borderColor: 'var(--erosion)', color: 'var(--erosion)' }}
+              onClick={() => {
+                onAzzera();
+                setConferma(false);
+              }}
+            >
+              Conferma azzeramento
+            </button>
+            <button className="bottone text-[12px]" onClick={() => setConferma(false)}>
+              Annulla
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

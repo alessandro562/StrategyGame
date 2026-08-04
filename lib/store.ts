@@ -218,6 +218,22 @@ export async function ripristina(chiave: string): Promise<number> {
   return r.incr(K_VERSION);
 }
 
+/**
+ * Riporta la stanza al seed: serve dopo la prova generale in produzione, che
+ * altrimenti lascerebbe sessioni e commit di prova dentro il ritiro vero.
+ * Prende uno snapshot prima di buttare via, così anche un azzeramento fatto per
+ * sbaglio si annulla dal ripristino.
+ */
+export async function azzera(): Promise<number> {
+  const r = redis();
+  await snapshot();
+  const chiavi = await r.smembers(K_COMMIT_INDEX);
+  if (chiavi.length > 0) await r.del(...chiavi);
+  await r.del(K_COMMIT_INDEX, K_SEEN);
+  await r.set(K_STATE, JSON.stringify(statoIniziale()));
+  return r.incr(K_VERSION);
+}
+
 export async function scriviStatoGrezzo(state: Store): Promise<number> {
   const r = redis();
   await r.set(K_STATE, JSON.stringify(state));
