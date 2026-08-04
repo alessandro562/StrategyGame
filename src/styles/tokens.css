@@ -1,0 +1,215 @@
+/**
+ * Sistema visivo — §8.
+ *
+ * Control room, non workshop. Densa, scura, strumentale.
+ * Un solo accento per volta a schermo. Il colore codifica stato, mai
+ * decorazione. Nessuna ombra, nessun gradiente.
+ *
+ * Il blu WDA (#3D6C92, campionato dal logo in public/brand) è il colore del
+ * marchio e dello stato "bloccato": è l'unico punto in cui identità e semantica
+ * coincidono, ed è coerente — un artefatto bloccato è WDA che ha deciso.
+ * Sui fondi scuri il blu del logo non ha contrasto sufficiente, quindi la
+ * versione schiarita --wda-bright è quella che porta il testo e i tratti fini;
+ * --wda resta per riempimenti e superfici.
+ */
+
+:root {
+  --bg-deep: #0b0e12;
+  --bg-panel: #12161c;
+  --bg-raised: #1a1f27;
+  --line: #242a33;
+  --line-strong: #38414e;
+
+  --ink: #e6e8eb;
+  --ink-dim: #8b939f;
+  --ink-faint: #5a626d;
+
+  /* Marchio WDA */
+  --wda: #3d6c92;
+  --wda-bright: #6fa3ce;
+  --wda-deep: #24425a;
+  --wda-wash: rgba(61, 108, 146, 0.16);
+
+  --live: #4ade9b; /* attivo, commit ricevuto, residuo umano */
+  --tension: #f0a742; /* divergenza, timer in scadenza */
+  --erosion: #e8674a; /* erosione, vulnerabilità, chiuso */
+  --locked: #6fa3ce; /* artefatto bloccato — famiglia WDA */
+
+  --radius: 2px;
+  --grid: 4px;
+
+  --font-ui: 'Söhne', 'Basis Grotesque', 'Suisse Int\'l', system-ui, -apple-system,
+    'Segoe UI', 'Helvetica Neue', sans-serif;
+  --font-mono: 'Berkeley Mono', 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo',
+    'Consolas', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-deep);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* Tutti i numeri in mono con cifre tabulari, senza eccezioni: le cifre
+   tabulari non ballano mentre si aggiornano, e la percezione di
+   strumentazione viene da lì (§8.3). */
+.num,
+input[type='number'],
+time,
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--ink);
+  background: var(--bg-deep);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  outline: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--wda-bright);
+}
+
+::selection {
+  background: var(--wda);
+  color: #fff;
+}
+
+/* --- utilità --------------------------------------------------------- */
+
+.pannello {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+}
+
+.rialzato {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+}
+
+.etichetta {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+}
+
+.bottone {
+  border: 1px solid var(--line-strong);
+  background: var(--bg-raised);
+  padding: 7px 12px;
+  color: var(--ink);
+  transition: border-color 120ms linear, background 120ms linear;
+}
+
+.bottone:hover:not(:disabled) {
+  border-color: var(--wda-bright);
+}
+
+.bottone-primario {
+  border-color: var(--wda);
+  background: var(--wda-wash);
+  color: var(--wda-bright);
+}
+
+.bottone-primario:hover:not(:disabled) {
+  background: var(--wda);
+  color: #fff;
+}
+
+.bottone[aria-pressed='true'] {
+  border-color: var(--wda-bright);
+  background: var(--wda-wash);
+  color: var(--wda-bright);
+}
+
+/* Griglia di fondo: dà profondità senza usare ombre né gradienti. */
+.griglia-fondo {
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: calc(var(--grid) * 8) calc(var(--grid) * 8);
+  opacity: 0.28;
+}
+
+.barra-scorrimento::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.barra-scorrimento::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+}
+.barra-scorrimento::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Tratteggio per le attività MORTE (§M1 passo 3) */
+.tratteggio {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--erosion) 0,
+    var(--erosion) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+}
+
+/* Strisce diagonali per i segmenti in divergenza */
+.strisce {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--tension) 0,
+    var(--tension) 3px,
+    var(--bg-raised) 3px,
+    var(--bg-raised) 8px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,0 +1,321 @@
+/**
+ * M9 — generazione del verbale in markdown.
+ *
+ * Deve funzionare con dati parziali: è scaricabile in qualsiasi momento, anche
+ * a ritiro in corso e con moduli mai aperti. Nessun punteggio, nessuna
+ * classifica, nessuna valutazione delle persone.
+ */
+
+import {
+  controlliM8,
+  daRiconvalidare,
+  diagnosiPosizione,
+  esitiServizio,
+  flussiDistinti,
+  forbice,
+  pctErosione,
+  storicoCappelli,
+  vettoreStrategia,
+} from './calc';
+import type { Commit, Store } from './types';
+
+function data(ts: number): string {
+  return new Date(ts).toLocaleString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function num(n: number, decimali = 0): string {
+  return n.toLocaleString('it-IT', { minimumFractionDigits: decimali, maximumFractionDigits: decimali });
+}
+
+export function generaVerbale(state: Store, commits: Commit[], ora = Date.now()): string {
+  const nome = (pid: string) => state.partecipanti.find((p) => p.id === pid)?.nome ?? pid;
+  const out: string[] = [];
+  const w = out.push.bind(out);
+
+  w(`# ${state.workshop.nome}`);
+  w('');
+  w(`Verbale generato il ${data(ora)}.`);
+  w('');
+  w(
+    `Partecipanti: ${state.partecipanti.map((p) => `${p.nome}${p.presente ? '' : ' (assente)'}`).join(', ')}.`,
+  );
+  w('');
+
+  /* 1-2. Decisioni bloccate e dissensi ------------------------------ */
+  w('## 1. Decisioni bloccate');
+  w('');
+  const lockOrdinati = [...state.lock].sort((a, b) => a.timestamp - b.timestamp);
+  if (lockOrdinati.length === 0) {
+    w('Nessuna decisione bloccata.');
+  } else {
+    for (const l of lockOrdinati) {
+      w(`### ${l.modulo} — ${l.titolo}`);
+      w('');
+      w(`Bloccata il ${data(l.timestamp)}${l.riapertoA ? `, riaperta il ${data(l.riapertoA)}` : ''}.`);
+      w('');
+      const c = l.contenuto;
+      if (typeof c === 'string') w(c);
+      else if (c && typeof c === 'object') w('```json\n' + JSON.stringify(c, null, 2) + '\n```');
+      w('');
+      if (l.dissensi.length > 0) {
+        w('Dissensi registrati:');
+        w('');
+        for (const d of l.dissensi) w(`- **${nome(d.partecipanteId)}** — ${d.nota}`);
+      } else {
+        w('Nessun dissenso registrato.');
+      }
+      w('');
+    }
+  }
+
+  /* 3. Catalogo nei tre bucket -------------------------------------- */
+  w('## 2. Il catalogo nei tre bucket');
+  w('');
+  const bucket = (b: string) => state.servizi.filter((s) => s.bucket === b);
+  const etichette: Record<string, string> = {
+    NUCLEO: 'Nucleo — stesso prezzo, un decimo del lavoro',
+    PORTA: 'Porta — in commoditizzazione, si tiene solo se apre relazioni',
+    CHIUSO: 'Chiuso — il servizio muore',
+  };
+  for (const b of ['NUCLEO', 'PORTA', 'CHIUSO'] as const) {
+    const servizi = bucket(b);
+    w(`### ${etichette[b]}`);
+    w('');
+    if (servizi.length === 0) {
+      w('_Nessun servizio._');
+      w('');
+      continue;
+    }
+    w('| Servizio | Fatturato 12m | Residuo umano |');
+    w('|---|---:|---:|');
+    for (const s of servizi) {
+      const sessioniM1 = new Set(
+        state.sessioni.filter((x) => x.modulo === 'M1' && x.soggettoId === s.id).map((x) => x.id),
+      );
+      const esiti = esitiServizio(
+        s,
+        commits.filter((c) => sessioniM1.has(c.sessioneId)),
+      );
+      w(`| ${s.nome} | ${num(s.fatturato12m)} € | ${num(esiti.residuoPct, 1)}% |`);
+    }
+    w('');
+  }
+  const nonClassificati = state.servizi.filter((s) => s.bucket === null);
+  if (nonClassificati.length > 0) {
+    w(`Servizi non ancora classificati: ${nonClassificati.map((s) => s.nome).join(', ')}.`);
+    w('');
+  }
+
+  /* 4. Basi di prezzo ------------------------------------------------ */
+  w('## 3. Le basi di prezzo');
+  w('');
+  const conBase = state.servizi.filter((s) => s.bucket !== 'CHIUSO');
+  if (conBase.length === 0) {
+    w('Nessun servizio in catalogo.');
+  } else {
+    w('| Servizio | Base primaria | Base secondaria | Nota |');
+    w('|---|---|---|---|');
+    for (const s of conBase) {
+      const b = s.basePrezzo;
+      const primaria = b ? b.primaria : 'GIORNATA — erosione attesa';
+      w(`| ${s.nome} | ${primaria} | ${b?.secondaria ?? '—'} | ${b?.nota ?? '—'} |`);
+    }
+  }
+  w('');
+  w(`**${num(pctErosione(state.servizi), 1)}% del fatturato futuro poggia su una base in erosione.**`);
+  w('');
+
+  /* 5-6. Posizione e vettore ---------------------------------------- */
+  w('## 4. La posizione');
+  w('');
+  const distinti = flussiDistinti(state.flussi);
+  w(`Flussi distinti su cui siede WDA: **${distinti}** — ${diagnosiPosizione(distinti)}.`);
+  w('');
+  const senzaFlusso = state.servizi.filter((s) => s.nessunFlusso);
+  if (senzaFlusso.length > 0) {
+    w(
+      `Servizi che non generano alcun flusso (consulenza tradizionale in erosione): ${senzaFlusso
+        .map((s) => s.nome)
+        .join(', ')}.`,
+    );
+    w('');
+  }
+
+  w('## 5. Il vettore di posizionamento');
+  w('');
+  const asse = state.assi.find((a) => a.id === state.workshop.asseCorrenteId) ?? state.assi[0];
+  const v = vettoreStrategia(state.posizionamenti);
+  if (!v.oggi || !v.futuro || !asse) {
+    w('Posizionamento non ancora completato.');
+  } else {
+    w(`Assi: **${asse.xSinistra} ↔ ${asse.xDestra}** (orizzontale), **${asse.ySotto} ↔ ${asse.ySopra}** (verticale).`);
+    w('');
+    w(`- Centroide oggi: ${num(v.oggi.x * 100)} / ${num(v.oggi.y * 100)}`);
+    w(`- Centroide a 12 mesi: ${num(v.futuro.x * 100)} / ${num(v.futuro.y * 100)}`);
+    w(`- Dispersione oggi: ${num(v.dispersioneOggi * 100, 1)}`);
+    w(`- Dispersione a 12 mesi: ${num(v.dispersioneFuturo * 100, 1)}`);
+    w(`- Lunghezza del vettore: ${num(v.lunghezza * 100, 1)}`);
+    if (v.altaDivergenzaOggi) {
+      w('');
+      w(
+        '> Alta divergenza su dove siete adesso. Non essere d’accordo su dove andare è normale. Non essere d’accordo su dove si è già significa che state lavorando in aziende diverse.',
+      );
+    }
+  }
+  w('');
+
+  /* 7. Vulnerabilità ------------------------------------------------- */
+  w('## 6. Vulnerabilità ancora aperte');
+  w('');
+  const aperte = state.vulnerabilita.filter((x) => x.chiusaA === null);
+  if (aperte.length === 0) {
+    w('Nessuna vulnerabilità aperta.');
+  } else {
+    for (const x of aperte) {
+      const comp = state.competitor.find((c) => c.id === x.competitorId);
+      w(`- **${x.testo}** — ${comp?.descrizione ?? ''}`);
+    }
+  }
+  w('');
+
+  /* 8. Soglia e forbice ---------------------------------------------- */
+  w('## 7. La soglia di sostenibilità');
+  w('');
+  const f = forbice(state.soglie);
+  w(
+    `Soglia condivisa: **${state.workshop.sogliaCondivisaPct !== null ? `${num(state.workshop.sogliaCondivisaPct)}%` : 'non ancora negoziata'}**.`,
+  );
+  w('');
+  if (f.min !== null && f.max !== null) {
+    w(`Forbice originale: da ${num(f.min)}% a ${num(f.max)}% — **${num(f.ampiezza)} punti**.`);
+    w('');
+    w('Trigger di allarme raccolti (in ordine mescolato, non attribuiti):');
+    w('');
+    for (const s of state.soglie) if (s.trigger.trim()) w(`- ${s.trigger.trim()}`);
+  } else {
+    w('Nessuna soglia individuale raccolta.');
+  }
+  w('');
+  if (state.traiettoria.length > 0) {
+    w('Traiettoria verso gennaio 2027:');
+    w('');
+    w('| Trimestre | Quota servizi | R | G | B |');
+    w('|---|---:|---:|---:|---:|');
+    for (const t of state.traiettoria) {
+      w(`| ${t.etichetta} | ${num(t.quotaServiziPct)}% | ${t.consumo.R} | ${t.consumo.G} | ${t.consumo.B} |`);
+    }
+    w('');
+  }
+
+  /* 9. Invarianti ---------------------------------------------------- */
+  w('## 8. Invarianti');
+  w('');
+  const invarianti = state.invarianti.filter((i) => i.scenario === 'ENTRAMBI');
+  if (invarianti.length === 0) w('_Nessun invariante._');
+  for (const i of invarianti) w(`- ${i.testo}`);
+  w('');
+  w('## 9. Condizionati');
+  w('');
+  const condizionati = state.invarianti.filter((i) => i.scenario !== 'ENTRAMBI');
+  if (condizionati.length === 0) w('_Nessuna affermazione condizionata._');
+  for (const i of condizionati) {
+    const scenario = i.scenario === 'AUTONOMO' ? 'solo con brand autonomo' : 'solo come sub-brand';
+    w(`- ${i.testo} — _${scenario}_`);
+  }
+  w('');
+
+  /* 10. Action plan --------------------------------------------------- */
+  w('## 10. Action plan');
+  w('');
+  const controlli = controlliM8(state.azioni, state.lock);
+  if (state.azioni.length === 0) {
+    w('Nessuna azione registrata.');
+  } else {
+    for (const orizzonte of ['90_GIORNI', 'A_GENNAIO_2027'] as const) {
+      const azioni = state.azioni.filter((a) => a.orizzonte === orizzonte);
+      w(`### ${orizzonte === '90_GIORNI' ? '90 giorni — entro fine ottobre 2026' : 'A gennaio 2027'}`);
+      w('');
+      if (azioni.length === 0) {
+        w('_Nessuna azione._');
+        w('');
+        continue;
+      }
+      w('| Azione | Owner | Scadenza | Da quale decisione |');
+      w('|---|---|---|---|');
+      for (const a of azioni) {
+        const l = state.lock.find((x) => x.id === a.lockOrigine);
+        w(`| ${a.testo} | ${nome(a.ownerId)} | ${a.scadenza} | ${l ? `${l.modulo} — ${l.titolo}` : '—'} |`);
+      }
+      w('');
+    }
+
+    w('### Per owner');
+    w('');
+    for (const o of controlli.perOwner) {
+      w(`**${nome(o.ownerId)}** — ${o.conteggio} azioni (${num(o.quota * 100)}%)${o.sovraccarico ? ' — oltre il 40% del totale' : ''}`);
+      w('');
+      for (const a of state.azioni.filter((x) => x.ownerId === o.ownerId)) {
+        w(`- ${a.testo} — ${a.scadenza}`);
+      }
+      w('');
+    }
+  }
+  if (controlli.lockSenzaAzione.length > 0) {
+    const titoli = controlli.lockSenzaAzione
+      .map((id) => state.lock.find((l) => l.id === id))
+      .filter(Boolean)
+      .map((l) => `${l!.modulo} — ${l!.titolo}`);
+    w(`Decisioni senza esecuzione: ${titoli.join('; ')}.`);
+    w('');
+  }
+
+  /* 11. Cappelli ------------------------------------------------------ */
+  w('## 11. Mappa cappello × persona');
+  w('');
+  const storico = storicoCappelli(state.sessioni);
+  if (Object.keys(storico).length === 0) {
+    w('Nessun cappello distribuito.');
+  } else {
+    w('| Persona | Cappelli portati |');
+    w('|---|---|');
+    for (const p of state.partecipanti) {
+      const c = storico[p.id];
+      if (c?.length) w(`| ${p.nome} | ${c.join(', ')} |`);
+    }
+  }
+  w('');
+
+  /* 12. Riaperture ---------------------------------------------------- */
+  w('## 12. Decisioni riaperte');
+  w('');
+  const { riaperti, aValle } = daRiconvalidare(state.lock);
+  if (riaperti.length === 0) {
+    w('Nessuna decisione riaperta.');
+  } else {
+    for (const l of riaperti) w(`- ${l.modulo} — ${l.titolo}, riaperta il ${data(l.riapertoA!)}`);
+    w('');
+    w(`Decisioni a valle da riconvalidare: **${aValle.length}**.`);
+    for (const l of aValle) w(`- ${l.modulo} — ${l.titolo}`);
+  }
+  w('');
+
+  /* Note di discussione ------------------------------------------------ */
+  const pubbliche = state.note.filter((n) => !n.privata);
+  if (pubbliche.length > 0) {
+    w('## 13. Note di discussione');
+    w('');
+    for (const n of pubbliche.sort((a, b) => a.ts - b.ts)) {
+      const s = state.sessioni.find((x) => x.id === n.sessioneId);
+      w(`- [${s?.modulo ?? '—'}] **${nome(n.partecipanteId)}**: ${n.testo}`);
+    }
+    w('');
+  }
+
+  return out.join('\n');
+}
