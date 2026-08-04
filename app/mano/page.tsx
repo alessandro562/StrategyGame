@@ -16,6 +16,7 @@ import { CtxStore, useContestoMemo, useStore } from '@/net/useStore';
 import { esci, usePolling } from '@/net/usePolling';
 import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { Entra } from '@/components/Entra';
+import { FacilitatorPanel } from '@/components/FacilitatorPanel';
 import { FaseMano } from '@/components/FasciaFase';
 import { HatBadge } from '@/components/HatBadge';
 import { Monogramma } from '@/components/Logo';
@@ -46,10 +47,15 @@ function Mano() {
   const polling = usePolling('mano', stanza);
   const ctx = useContestoMemo(polling);
   const nomi = useNomiLiberi(polling.nonAutenticato);
+  const [pannello, setPannello] = useState(false);
 
   if (polling.nonAutenticato) {
     return <Entra onEntrato={polling.riprendi} nomiSuggeriti={nomi} />;
   }
+
+  // Chi ha i diritti da facilitatore (o il master, sempre) può aprire il
+  // pannello anche da qui: non tutti hanno un portatile a portata di mano.
+  const puoFacilitare = ctx.stato?.sonoFacilitatore ?? false;
 
   return (
     <CtxStore.Provider value={ctx}>
@@ -61,7 +67,14 @@ function Mano() {
             <ConnectionBanner rete={polling.rete} inCoda={polling.inCoda} soloLettura={polling.soloLettura} />
           </div>
           <Timer sessione={ctx.sessioneAttiva} ora={polling.ora} />
+          {puoFacilitare && (
+            <button className="bottone text-[12px]" onClick={() => setPannello(true)}>
+              Facilitatore
+            </button>
+          )}
         </header>
+
+        {pannello && <FacilitatorPanel ctx={ctx} chiudi={() => setPannello(false)} />}
 
         {ctx.mioCappello && (
           <div className="shrink-0">

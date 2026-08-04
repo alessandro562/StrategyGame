@@ -20,6 +20,13 @@ import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypt
 export const COOKIE_SESSIONE = 'wda_sessione';
 export const DURATA_SESSIONE_S = 60 * 60 * 24 * 30;
 
+/**
+ * L'account con diritti da facilitatore permanenti, a prescindere da chi ha
+ * rivendicato il ruolo in un dato momento. Un solo indirizzo, impostato qui e
+ * non a runtime: il ruolo master non si autoconcede via API.
+ */
+export const EMAIL_MASTER = 'alessandro@wda.company';
+
 /** Volutamente basso: la richiesta era esplicita, «non stringente». */
 export const LUNGHEZZA_MINIMA_PASSWORD = 4;
 
