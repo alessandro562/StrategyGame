@@ -1,14 +1,16 @@
 'use client';
 
 /**
- * Il marchio WDA. I file in public/brand sono quelli caricati nel repository:
- * la variante bianca è l'unica leggibile sui fondi scuri della control room,
- * la blu resta per eventuali superfici chiare (stampe, export).
+ * Il marchio WDA. I file in public/brand sono quelli caricati nel repository.
+ *
+ * Col fondo chiaro la variante di riferimento è la blu: la bianca sparisce
+ * sul bianco. La bianca resta disponibile per le poche superfici piene
+ * d'accento (un riempimento --wda sotto il marchio), e va chiesta a mano.
  */
 
 /* eslint-disable @next/next/no-img-element */
 
-export function Logo({ altezza = 20, variante = 'bianco' }: { altezza?: number; variante?: 'bianco' | 'blu' }) {
+export function Logo({ altezza = 20, variante = 'blu' }: { altezza?: number; variante?: 'bianco' | 'blu' }) {
   return (
     <img
       src={variante === 'bianco' ? '/brand/wda-logo-white.png' : '/brand/wda-logo-blue.png'}

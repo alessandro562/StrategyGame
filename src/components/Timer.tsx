@@ -73,10 +73,15 @@ export function Timer({
   const colore = scaduto ? 'var(--erosion)' : inTensione ? 'var(--tension)' : 'var(--ink)';
 
   return (
-    <div className="flex items-baseline gap-2" aria-live="off">
+    // Grande, l'etichetta non può stare sulla stessa linea di base di un numero
+    // da 200px: sale sopra, incolonnata al centro con le cifre.
+    <div
+      className={grande ? 'flex flex-col items-center gap-2' : 'flex items-baseline gap-2'}
+      aria-live="off"
+    >
       <span className="etichetta">timer</span>
       <time
-        className="mono tabular-nums leading-none"
+        className="mono leading-none"
         style={{
           color: colore,
           fontSize: grande ? 'clamp(64px, 18vw, 200px)' : 22,

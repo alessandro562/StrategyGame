@@ -5,6 +5,12 @@
  *
  * Passo 1 scomposizione (plenaria) · passo 2 destinazione (commit cieco)
  * passo 3 reveal · passo 4 il residuo · passo 5 lock nei tre bucket.
+ *
+ * Scala tipografica del modulo, tre gradini: .etichetta (11px, mono) per le
+ * intestazioni di colonna e le unità, 13px per le righe dense — dentro una
+ * riga tutte le celle hanno lo stesso corpo — e 15px per il contenuto
+ * primario. 17px solo per la domanda del passo 4 e per il fatturato in testa.
+ * Il residuo resta l'unico numero grande della schermata.
  */
 
 import { useState } from 'react';
@@ -68,7 +74,7 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
         destra={
           <div className="text-right">
             <div className="etichetta">fatturato 12m</div>
-            <div className="mono text-[17px]">{servizio.fatturato12m.toLocaleString('it-IT')} €</div>
+            <div className="mono text-[17px] mt-1">{servizio.fatturato12m.toLocaleString('it-IT')} €</div>
           </div>
         }
       />
@@ -86,19 +92,22 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
 
       {(sessione.stato === 'REVEAL' || sessione.stato === 'DISCUSSIONE' || sessione.stato === 'LOCKED') && (
         <>
-          <RevealStage
-            elementi={esiti.esiti}
-            seme={sessione.id}
-            partito={partito || sessione.stato !== 'REVEAL'}
-            chiave={(e) => e.attivitaId}
-            className="pannello p-4 flex flex-col gap-2"
-            render={(e) => <RigaEsito esito={e} />}
-          />
+          <div className="pannello p-4 flex flex-col gap-3">
+            <IntestazioneEsiti />
+            <RevealStage
+              elementi={esiti.esiti}
+              seme={sessione.id}
+              partito={partito || sessione.stato !== 'REVEAL'}
+              chiave={(e) => e.attivitaId}
+              className="flex flex-col gap-2"
+              render={(e) => <RigaEsito esito={e} />}
+            />
+          </div>
 
           <BarraAttivita esiti={esiti} />
 
           <div className="grid grid-cols-[1fr_320px] gap-4 items-start">
-            <div className="pannello p-6 flex flex-col items-center justify-center">
+            <div className="pannello p-4 flex flex-col items-center justify-center gap-2">
               <span className="etichetta">residuo umano</span>
               <div
                 className="mono leading-none"
@@ -107,12 +116,14 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
                 {esiti.residuoPct.toFixed(0)}%
               </div>
               {esiti.quoteInPareggio > 0 && (
-                <span className="etichetta mt-2" style={{ color: 'var(--tension)' }}>
-                  {esiti.quoteInPareggio}% delle quote in pareggio, fuori dal residuo
-                </span>
+                <p className="m-0 text-[13px] text-center" style={{ color: 'var(--tension)' }}>
+                  <span className="mono">{esiti.quoteInPareggio}%</span> delle quote in pareggio, fuori dal residuo
+                </p>
               )}
               {sommaQuote !== 100 && (
-                <span className="etichetta mt-1">quote sommate: {sommaQuote}% — residuo normalizzato</span>
+                <p className="m-0 text-[13px] text-center" style={{ color: 'var(--ink-dim)' }}>
+                  Quote sommate: <span className="mono">{sommaQuote}%</span> — residuo normalizzato
+                </p>
               )}
             </div>
 
@@ -136,13 +147,14 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
               <div className="grid grid-cols-3 gap-2">
                 {RISPOSTE.map((r) => {
                   const attiva = servizio.valoreResiduo === r.chiave;
+                  const spento = r.bucket === 'CHIUSO' && !chiPropone;
                   return (
                     <button
                       key={r.chiave}
-                      className="bottone text-left p-3"
+                      className="bottone text-left p-3 flex flex-col gap-1"
                       aria-pressed={attiva}
                       onClick={() => {
-                        if (r.bucket === 'CHIUSO' && !chiPropone) return;
+                        if (spento) return;
                         invia('servizio.setBucket', {
                           servizioId: servizio.id,
                           bucket: r.bucket,
@@ -150,22 +162,37 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
                           richiestoDa: r.bucket === 'CHIUSO' ? chiPropone : undefined,
                         });
                       }}
-                      disabled={r.bucket === 'CHIUSO' && !chiPropone}
+                      disabled={spento}
                     >
-                      <div className="text-[14px]">{r.testo}</div>
-                      <div className="mono text-[12px] mt-1" style={{ color: coloreBucket(r.bucket) }}>
+                      <span className="text-[15px]">{r.testo}</span>
+                      {/* Da spento le due righe sotto perdono il colore
+                          semantico: hanno un colore inline, quindi la regola
+                          `button:disabled` dei token non le raggiunge e senza
+                          questo il bottone inerte resterebbe acceso come gli
+                          altri due. */}
+                      <span
+                        className="mono text-[13px]"
+                        style={{ color: spento ? 'var(--ink-faint)' : coloreBucket(r.bucket) }}
+                      >
                         {r.bucket}
-                      </div>
-                      <div className="text-[12px] mt-1" style={{ color: 'var(--ink-faint)' }}>
+                      </span>
+                      <span
+                        className="text-[13px]"
+                        style={{ color: spento ? 'var(--ink-faint)' : 'var(--ink-dim)' }}
+                      >
                         {r.significato}
-                      </div>
+                      </span>
                     </button>
                   );
                 })}
               </div>
-              <label className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--ink-dim)' }}>
+              <label className="flex items-center gap-2 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
                 <span className="etichetta">chiusura richiesta da</span>
-                <select value={chiPropone ?? ''} onChange={(e) => setChiPropone(e.target.value || null)}>
+                <select
+                  className="text-[13px]"
+                  value={chiPropone ?? ''}
+                  onChange={(e) => setChiPropone(e.target.value || null)}
+                >
                   <option value="">nessuno</option>
                   {presenti.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -218,19 +245,19 @@ function SceltaServizio({ sessione }: { sessione: Sessione }) {
         {stato.servizi.map((s) => (
           <button
             key={s.id}
-            className="bottone p-4 text-left"
+            className="bottone p-4 text-left flex flex-col gap-1"
             onClick={() =>
               invia('session.create', { modulo: 'M1', titolo: s.nome, soggettoId: s.id, durataS: 240 })
             }
           >
-            <div className="text-[15px]">{s.nome}</div>
-            <div className="mono text-[12px] mt-1" style={{ color: coloreBucket(s.bucket) }}>
+            <span className="text-[15px]">{s.nome}</span>
+            <span className="mono text-[13px]" style={{ color: coloreBucket(s.bucket) }}>
               {s.bucket ?? 'non smontato'}
-            </div>
+            </span>
           </button>
         ))}
       </div>
-      <p className="m-0 text-[12px]" style={{ color: 'var(--ink-faint)' }}>
+      <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
         Round corrente: {sessione.modulo} — {sessione.titolo}
       </p>
     </div>
@@ -254,18 +281,20 @@ function Scomposizione({ servizio, sommaQuote }: { servizio: Servizio; sommaQuot
       <div className="flex flex-col gap-2">
         {servizio.attivita.map((a, i) => (
           <div key={a.id} className="flex items-center gap-2">
-            <span className="mono text-[12px] w-6" style={{ color: 'var(--ink-faint)' }}>
+            <span className="mono text-[13px] w-6 shrink-0 text-right" style={{ color: 'var(--ink-faint)' }}>
               {String(i + 1).padStart(2, '0')}
             </span>
             <input
-              className="flex-1 text-[14px]"
+              className="flex-1 min-w-0 text-[13px]"
+              aria-label={`nome dell'attività ${i + 1}`}
               value={a.nome}
               onChange={(e) =>
                 aggiorna(servizio.attivita.map((x) => (x.id === a.id ? { ...x, nome: e.target.value } : x)))
               }
             />
             <input
-              className="mono text-[13px] w-16 text-right"
+              className="mono text-[13px] w-20 shrink-0 text-right"
+              aria-label={`quota di prezzo di ${a.nome}`}
               type="number"
               min={0}
               max={100}
@@ -278,9 +307,11 @@ function Scomposizione({ servizio, sommaQuote }: { servizio: Servizio; sommaQuot
                 )
               }
             />
-            <span className="etichetta">%</span>
+            <span className="etichetta shrink-0">%</span>
             <button
-              className="bottone text-[12px]"
+              className="bottone text-[13px] shrink-0"
+              aria-label={`rimuovi ${a.nome}`}
+              title="Rimuovi l'attività"
               onClick={() => aggiorna(servizio.attivita.filter((x) => x.id !== a.id))}
             >
               ×
@@ -291,7 +322,7 @@ function Scomposizione({ servizio, sommaQuote }: { servizio: Servizio; sommaQuot
 
       {/* Vincolo visivo: la barra si riempie fino a 100% */}
       <div>
-        <div className="flex h-2" style={{ background: 'var(--bg-deep)', border: '1px solid var(--line)' }}>
+        <div className="flex h-2" style={{ background: 'var(--bg-raised)', border: '1px solid var(--line)' }}>
           <div
             className="h-full"
             style={{
@@ -300,20 +331,28 @@ function Scomposizione({ servizio, sommaQuote }: { servizio: Servizio; sommaQuot
             }}
           />
         </div>
-        <div className="flex justify-between mt-1">
+        <div className="flex items-baseline justify-between gap-3 mt-2">
           <span className="etichetta">somma delle quote</span>
-          <span
-            className="mono text-[13px]"
-            style={{ color: sommaQuote === 100 ? 'var(--live)' : 'var(--tension)' }}
-          >
-            {sommaQuote}%{sommaQuote !== 100 && ` — mancano ${100 - sommaQuote}`}
+          <span className="flex items-baseline gap-2">
+            <span
+              className="mono text-[13px]"
+              style={{ color: sommaQuote === 100 ? 'var(--live)' : 'var(--tension)' }}
+            >
+              {sommaQuote}%
+            </span>
+            {sommaQuote !== 100 && (
+              <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                — {sommaQuote < 100 ? 'mancano' : 'eccedono'}{' '}
+                <span className="mono">{Math.abs(100 - sommaQuote)}%</span>
+              </span>
+            )}
           </span>
         </div>
       </div>
 
       <div className="flex gap-2 flex-wrap">
         <button
-          className="bottone text-[12px]"
+          className="bottone text-[13px]"
           onClick={() =>
             aggiorna([
               ...servizio.attivita,
@@ -325,7 +364,7 @@ function Scomposizione({ servizio, sommaQuote }: { servizio: Servizio; sommaQuot
         </button>
         {suggerimenti && servizio.attivita.length === 0 && (
           <button
-            className="bottone text-[12px]"
+            className="bottone text-[13px]"
             onClick={() =>
               aggiorna(
                 suggerimenti.map((nome, i) => ({
@@ -344,15 +383,34 @@ function Scomposizione({ servizio, sommaQuote }: { servizio: Servizio; sommaQuot
   );
 }
 
+/**
+ * Intestazione di colonna della tabella degli esiti. Le stesse larghezze di
+ * RigaEsito: se una cambia, cambiano tutte e due.
+ */
+function IntestazioneEsiti() {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="etichetta flex-1 min-w-0">attività</span>
+      <span className="etichetta w-12 shrink-0 text-right">quota</span>
+      <span className="etichetta w-40 shrink-0">voti</span>
+      <span className="etichetta w-28 shrink-0">esito</span>
+      <span className="etichetta w-52 shrink-0">divergenza</span>
+    </div>
+  );
+}
+
 function RigaEsito({ esito }: { esito: EsitoAttivita }) {
   const totale = DESTINAZIONI.reduce((s, d) => s + esito.conteggi[d], 0);
   return (
     <div className="flex items-center gap-3">
-      <span className="text-[14px] flex-1">{esito.nome}</span>
-      <span className="mono text-[12px] w-10 text-right" style={{ color: 'var(--ink-dim)' }}>
+      <span className="text-[13px] flex-1 min-w-0 truncate">{esito.nome}</span>
+      <span className="mono text-[13px] w-12 shrink-0 text-right" style={{ color: 'var(--ink-dim)' }}>
         {esito.quotaPct}%
       </span>
-      <div className="flex w-40 h-3" style={{ border: '1px solid var(--line)' }}>
+      <div
+        className="flex w-40 h-3 shrink-0"
+        style={{ background: 'var(--bg-raised)', border: '1px solid var(--line)' }}
+      >
         {DESTINAZIONI.map((d) =>
           esito.conteggi[d] > 0 ? (
             <div
@@ -368,18 +426,19 @@ function RigaEsito({ esito }: { esito: EsitoAttivita }) {
         )}
       </div>
       <span
-        className="mono text-[12px] w-32"
+        className="mono text-[13px] w-28 shrink-0"
         style={{ color: esito.esito ? COLORE_DESTINAZIONE[esito.esito] : 'var(--tension)' }}
       >
         {esito.esito ?? 'pareggio'}
       </span>
-      {esito.divergente && (
-        <span className="mono text-[11px]" style={{ color: 'var(--tension)' }}>
-          {DESTINAZIONI.filter((d) => esito.conteggi[d] > 0)
-            .map((d) => `${esito.conteggi[d]} ${d}`)
-            .join(' / ')}
-        </span>
-      )}
+      {/* Colonna sempre presente, anche vuota: le righe restano incolonnate. */}
+      <span className="mono text-[13px] w-52 shrink-0 whitespace-nowrap" style={{ color: 'var(--tension)' }}>
+        {esito.divergente
+          ? DESTINAZIONI.filter((d) => esito.conteggi[d] > 0)
+              .map((d) => `${esito.conteggi[d]} ${d}`)
+              .join(' / ')
+          : ''}
+      </span>
     </div>
   );
 }
@@ -388,7 +447,7 @@ function RigaEsito({ esito }: { esito: EsitoAttivita }) {
 function BarraAttivita({ esiti, cieca = false }: { esiti: ReturnType<typeof esitiServizio>; cieca?: boolean }) {
   const totale = esiti.totaleQuote || 1;
   return (
-    <div className="flex h-16" style={{ border: '1px solid var(--line-strong)' }}>
+    <div className="flex h-16" style={{ border: '1px solid var(--line)' }}>
       {esiti.esiti.map((e) => {
         const larghezza = `${(e.quotaPct / totale) * 100}%`;
         if (cieca) {
@@ -396,29 +455,33 @@ function BarraAttivita({ esiti, cieca = false }: { esiti: ReturnType<typeof esit
             <div
               key={e.attivitaId}
               className="flex items-end p-1"
-              style={{ width: larghezza, borderRight: '1px solid var(--line)', background: 'var(--bg-panel)' }}
+              style={{ width: larghezza, borderRight: '1px solid var(--line)', background: 'var(--bg-raised)' }}
             >
-              <span className="mono text-[10px]" style={{ color: 'var(--ink-faint)' }}>
+              <span className="mono text-[11px]" style={{ color: 'var(--ink-dim)' }}>
                 {e.quotaPct}%
               </span>
             </div>
           );
         }
         const divergente = e.esito === null && e.votanti > 0;
+        const morta = e.esito === 'MORTA';
+        // Solo AI e UMANO sono riempimenti pieni: MORTA è tratteggiata e la
+        // divergenza è a strisce, e sopra un motivo il testo resta scuro.
+        const riempimento = e.esito === 'AI' || e.esito === 'UMANO' ? COLORE_DESTINAZIONE[e.esito] : undefined;
         return (
           <div
             key={e.attivitaId}
-            className={divergente ? 'strisce flex items-end p-1' : e.esito === 'MORTA' ? 'tratteggio flex items-end p-1' : 'flex items-end p-1'}
+            className={`flex items-end p-1 ${divergente ? 'strisce' : morta ? 'tratteggio' : ''}`}
             style={{
               width: larghezza,
               borderRight: '1px solid var(--bg-deep)',
-              background: divergente || e.esito === 'MORTA' ? undefined : e.esito ? COLORE_DESTINAZIONE[e.esito] : 'var(--bg-raised)',
+              background: riempimento ?? (divergente || morta ? undefined : 'var(--bg-raised)'),
             }}
             title={`${e.nome} — ${e.esito ?? 'pareggio'}`}
           >
             <span
-              className="mono text-[10px]"
-              style={{ color: e.esito === 'UMANO' ? 'var(--ink-inverso)' : 'var(--ink)' }}
+              className="mono text-[11px]"
+              style={{ color: riempimento ? 'var(--ink-inverso)' : 'var(--ink)' }}
             >
               {e.quotaPct}%
             </span>
@@ -452,19 +515,22 @@ function Confronto({ ordinaPerResiduo, onOrdina }: { ordinaPerResiduo: boolean; 
     <div className="pannello p-4">
       <div className="flex items-baseline justify-between mb-3">
         <span className="etichetta">servizi già smontati</span>
-        <button className="bottone text-[12px]" aria-pressed={ordinaPerResiduo} onClick={onOrdina}>
+        <button className="bottone text-[13px]" aria-pressed={ordinaPerResiduo} onClick={onOrdina}>
           Ordina per residuo
         </button>
       </div>
       <div className="flex flex-col gap-2">
         {ordinate.map((r) => (
           <div key={r.servizio.id} className="flex items-center gap-3">
-            <span className="text-[13px] w-56 shrink-0">{r.servizio.nome}</span>
-            <div className="flex-1 h-3" style={{ background: 'var(--bg-deep)', border: '1px solid var(--line)' }}>
+            <span className="text-[13px] w-56 shrink-0 truncate">{r.servizio.nome}</span>
+            <div
+              className="flex-1 h-3"
+              style={{ background: 'var(--bg-raised)', border: '1px solid var(--line)' }}
+            >
               <div className="h-full" style={{ width: `${r.residuo}%`, background: 'var(--live)' }} />
             </div>
-            <span className="mono text-[13px] w-12 text-right">{r.residuo.toFixed(0)}%</span>
-            <span className="mono text-[11px] w-16" style={{ color: coloreBucket(r.servizio.bucket) }}>
+            <span className="mono text-[13px] w-12 shrink-0 text-right">{r.residuo.toFixed(0)}%</span>
+            <span className="mono text-[13px] w-20 shrink-0" style={{ color: coloreBucket(r.servizio.bucket) }}>
               {r.servizio.bucket ?? '—'}
             </span>
           </div>
@@ -490,16 +556,17 @@ export function M1Mano({ sessione }: { sessione: Sessione }) {
   if (!stato || !servizio) return <Vuoto>Nessun servizio in smontaggio.</Vuoto>;
 
   const complete = servizio.attivita.every((a) => scelte[a.id]);
+  const mancanti = servizio.attivita.filter((a) => !scelte[a.id]).length;
 
   if (sessione.stato !== 'COMMIT') {
     return (
       <CompitoMano titolo={servizio.nome} sottotitolo="Il tuo commit, in sola lettura">
         <div className="flex flex-col gap-2">
           {servizio.attivita.map((a) => (
-            <div key={a.id} className="flex items-center justify-between gap-2 px-3 py-2 rialzato">
-              <span className="text-[14px]">{a.nome}</span>
+            <div key={a.id} className="flex items-center justify-between gap-3 px-3 py-3 rialzato">
+              <span className="text-[15px] flex-1 min-w-0">{a.nome}</span>
               <span
-                className="mono text-[12px]"
+                className="mono text-[13px] shrink-0"
                 style={{ color: scelte[a.id] ? COLORE_DESTINAZIONE[scelte[a.id]] : 'var(--ink-faint)' }}
               >
                 {scelte[a.id] ?? '—'}
@@ -524,21 +591,29 @@ export function M1Mano({ sessione }: { sessione: Sessione }) {
         <div className="flex flex-col gap-2">
           <StatoCommitMano confermato={mio?.confermato ?? false} />
           <button
-            className="bottone bottone-primario"
+            className="bottone bottone-primario text-[15px]"
             style={{ minHeight: 52 }}
             disabled={!complete || mio?.confermato}
             onClick={() => invia('commit.confirm', { sessioneId: sessione.id })}
           >
-            {mio?.confermato ? 'Confermato' : complete ? 'Conferma' : `Mancano ${servizio.attivita.filter((a) => !scelte[a.id]).length}`}
+            {mio?.confermato ? (
+              'Confermato'
+            ) : complete ? (
+              'Conferma'
+            ) : (
+              <>
+                Mancano <span className="mono">{mancanti}</span>
+              </>
+            )}
           </button>
         </div>
       }
     >
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         {servizio.attivita.map((a) => (
           <div key={a.id}>
-            <div className="text-[14px] mb-1">{a.nome}</div>
-            <div className="flex gap-1">
+            <div className="text-[15px] mb-2">{a.nome}</div>
+            <div className="flex gap-2">
               {DESTINAZIONI.map((d) => (
                 <BottoneTocco
                   key={d}

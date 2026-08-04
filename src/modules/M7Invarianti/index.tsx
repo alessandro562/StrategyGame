@@ -21,6 +21,12 @@ const SCENARI: { chiave: Scenario; breve: string; lungo: string }[] = [
   { chiave: 'SUB_BRAND', breve: 'solo sub-brand', lungo: 'Solo come sub-brand con partner industriale' },
 ];
 
+/** Larghezze delle colonne del tabellone: intestazioni e conteggi restano incolonnati. */
+const COL_VOTI = 'w-32 text-right shrink-0 whitespace-nowrap';
+const COL_ESITO = 'w-28 text-right shrink-0 whitespace-nowrap';
+
+const abilitatoDa = (scenario: Scenario) => (scenario === 'AUTONOMO' ? 'brand autonomo' : 'sub-brand');
+
 export function M7Tavolo({ sessione }: { sessione: Sessione }) {
   const ctx = useStore();
   const { stato, invia, presenti, nome, ora } = ctx;
@@ -42,29 +48,41 @@ export function M7Tavolo({ sessione }: { sessione: Sessione }) {
       />
 
       {sessione.stato === 'SETUP' && (
-        <div className="pannello p-4 flex flex-col gap-2">
+        <div className="pannello p-4 flex flex-col gap-3">
           <span className="etichetta">affermazioni sulla proposition</span>
-          {stato.invarianti.map((i) => (
-            <div key={i.id} className="flex items-center gap-2">
-              <input
-                className="flex-1 text-[14px]"
-                defaultValue={i.testo}
-                onBlur={(e) => invia('entity.upsert', { tipo: 'invariante', dati: { id: i.id, testo: e.target.value } })}
-              />
-              <button className="bottone text-[12px]" onClick={() => invia('entity.delete', { tipo: 'invariante', id: i.id })}>
-                ×
-              </button>
+
+          {stato.invarianti.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {stato.invarianti.map((i) => (
+                <div key={i.id} className="flex items-center gap-2">
+                  <input
+                    className="flex-1 text-[13px]"
+                    defaultValue={i.testo}
+                    onBlur={(e) =>
+                      invia('entity.upsert', { tipo: 'invariante', dati: { id: i.id, testo: e.target.value } })
+                    }
+                  />
+                  <button
+                    className="bottone text-[13px] w-9 shrink-0"
+                    aria-label="Elimina l’affermazione"
+                    onClick={() => invia('entity.delete', { tipo: 'invariante', id: i.id })}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
           <div className="flex gap-2">
             <input
-              className="flex-1 text-[14px]"
+              className="flex-1 text-[13px]"
               placeholder="Nuova affermazione"
               value={nuovo}
               onChange={(e) => setNuovo(e.target.value)}
             />
             <button
-              className="bottone text-[12px]"
+              className="bottone text-[13px] shrink-0"
               disabled={!nuovo.trim()}
               onClick={() => {
                 invia('entity.upsert', {
@@ -84,70 +102,123 @@ export function M7Tavolo({ sessione }: { sessione: Sessione }) {
 
       {rivelato && (
         <>
-          <RevealStage
-            elementi={stato.invarianti}
-            seme={sessione.id}
-            partito={partito || sessione.stato !== 'REVEAL'}
-            chiave={(i) => i.id}
-            className="pannello p-4 flex flex-col gap-2"
-            render={(inv) => {
-              const voti = inv.voti ?? [];
-              return (
-                <div className="flex items-center gap-3">
-                  <span className="text-[14px] flex-1">{inv.testo}</span>
-                  {SCENARI.map((s) => {
-                    const n = voti.filter((v) => v.scenario === s.chiave).length;
-                    return (
-                      <span
-                        key={s.chiave}
-                        className="mono text-[12px] w-24 text-right"
-                        style={{ color: n > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}
-                      >
-                        {n} {s.breve}
-                      </span>
-                    );
-                  })}
-                  <span
-                    className="mono text-[12px] w-28"
-                    style={{ color: inv.scenario === 'ENTRAMBI' ? 'var(--live)' : 'var(--tension)' }}
-                  >
-                    {inv.scenario === 'ENTRAMBI' ? 'invariante' : 'condizionato'}
-                  </span>
-                </div>
-              );
-            }}
-          />
-
-          <div className="grid grid-cols-2 gap-4 items-start">
-            <div className="pannello p-4" style={{ borderColor: 'var(--live)' }}>
-              <div className="etichetta mb-2" style={{ color: 'var(--live)' }}>
-                invarianti — si può cominciare da subito
-              </div>
-              {invarianti.length === 0 && <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>Nessuno.</span>}
-              <ul className="m-0 pl-4">
-                {invarianti.map((i) => (
-                  <li key={i.id} className="text-[14px]">
-                    {i.testo}
-                  </li>
-                ))}
-              </ul>
+          {/* Un tabellone: affermazione a sinistra, conteggi incolonnati a destra. */}
+          <div className="pannello">
+            <div
+              className="flex items-baseline gap-3 px-4 pt-4 pb-2"
+              style={{ borderBottom: '1px solid var(--line)' }}
+            >
+              <span className="etichetta flex-1 min-w-0">affermazione</span>
+              {SCENARI.map((s) => (
+                <span key={s.chiave} className={`etichetta ${COL_VOTI}`}>
+                  {s.breve}
+                </span>
+              ))}
+              <span className={`etichetta ${COL_ESITO}`}>esito</span>
             </div>
 
-            <div className="pannello p-4" style={{ borderColor: 'var(--tension)' }}>
-              <div className="etichetta mb-2" style={{ color: 'var(--tension)' }}>
-                condizionati — in sospeso fino all&apos;esito della trattativa
-              </div>
-              {condizionati.length === 0 && <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>Nessuno.</span>}
-              <ul className="m-0 pl-4">
-                {condizionati.map((i) => (
-                  <li key={i.id} className="text-[14px]">
-                    {i.testo}{' '}
-                    <span className="mono text-[12px]" style={{ color: 'var(--ink-faint)' }}>
-                      — abilitato da: {i.scenario === 'AUTONOMO' ? 'brand autonomo' : 'sub-brand'}
+            <RevealStage
+              elementi={stato.invarianti}
+              seme={sessione.id}
+              partito={partito || sessione.stato !== 'REVEAL'}
+              chiave={(i) => i.id}
+              className="px-4 py-3 flex flex-col gap-2"
+              render={(inv) => {
+                const voti = inv.voti ?? [];
+                return (
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-[13px] flex-1 min-w-0">{inv.testo}</span>
+                    {SCENARI.map((s) => {
+                      const n = voti.filter((v) => v.scenario === s.chiave).length;
+                      return (
+                        <span
+                          key={s.chiave}
+                          className={`mono text-[13px] ${COL_VOTI}`}
+                          style={{ color: n > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}
+                        >
+                          {n}
+                        </span>
+                      );
+                    })}
+                    <span
+                      className={`etichetta ${COL_ESITO}`}
+                      style={{ color: inv.scenario === 'ENTRAMBI' ? 'var(--live)' : 'var(--tension)' }}
+                    >
+                      {inv.scenario === 'ENTRAMBI' ? 'invariante' : 'condizionato'}
                     </span>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                );
+              }}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="pannello p-4 flex flex-col gap-3" style={{ borderColor: 'var(--live)' }}>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="etichetta" style={{ color: 'var(--live)' }}>
+                  invarianti — si può cominciare da subito
+                </span>
+                <span className="mono text-[13px] shrink-0" style={{ color: 'var(--live)' }}>
+                  {invarianti.length}
+                </span>
+              </div>
+              {invarianti.length === 0 ? (
+                <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                  Nessuno.
+                </span>
+              ) : (
+                // Marcatore esplicito: il preflight di Tailwind toglie i
+                // pallini nativi. Stesso quadratino da 4px di M5 e M6.
+                <ul className="m-0 p-0 list-none flex flex-col gap-2">
+                  {invarianti.map((i) => (
+                    <li key={i.id} className="flex items-start gap-3 text-[13px]">
+                      <span
+                        aria-hidden
+                        className="shrink-0"
+                        style={{ width: 4, height: 4, marginTop: 8, background: 'var(--ink-faint)' }}
+                      />
+                      <span>{i.testo}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="pannello p-4 flex flex-col gap-3" style={{ borderColor: 'var(--tension)' }}>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="etichetta" style={{ color: 'var(--tension)' }}>
+                  condizionati — in sospeso fino all&apos;esito della trattativa
+                </span>
+                <span className="mono text-[13px] shrink-0" style={{ color: 'var(--tension)' }}>
+                  {condizionati.length}
+                </span>
+              </div>
+              {condizionati.length === 0 ? (
+                <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                  Nessuno.
+                </span>
+              ) : (
+                <ul className="m-0 p-0 list-none flex flex-col gap-2">
+                  {condizionati.map((i) => (
+                    <li key={i.id} className="flex items-start gap-3 text-[13px]">
+                      <span
+                        aria-hidden
+                        className="shrink-0"
+                        style={{ width: 4, height: 4, marginTop: 8, background: 'var(--tension)' }}
+                      />
+                      <span className="min-w-0">
+                        {i.testo}
+                        <span className="flex items-baseline gap-2 mt-1">
+                          <span className="etichetta">abilitato da</span>
+                          <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                            {abilitatoDa(i.scenario)}
+                          </span>
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
@@ -180,18 +251,27 @@ export function M7Mano({ sessione }: { sessione: Sessione }) {
 
   if (!stato) return null;
   const complete = stato.invarianti.every((i) => voti[i.id]);
+  const mancanti = stato.invarianti.filter((i) => !voti[i.id]).length;
 
   if (sessione.stato !== 'COMMIT') {
     return (
       <CompitoMano titolo="I tuoi voti" sottotitolo="In sola lettura">
-        {stato.invarianti.map((i) => (
-          <div key={i.id} className="py-2" style={{ borderBottom: '1px solid var(--line)' }}>
-            <div className="text-[14px]">{i.testo}</div>
-            <div className="mono text-[12px]" style={{ color: 'var(--ink-dim)' }}>
-              {voti[i.id] ?? '—'}
+        <div className="flex flex-col">
+          {stato.invarianti.map((i, idx) => (
+            <div
+              key={i.id}
+              className="flex flex-col gap-1 py-3"
+              style={
+                idx < stato.invarianti.length - 1 ? { borderBottom: '1px solid var(--line)' } : undefined
+              }
+            >
+              <span className="text-[15px]">{i.testo}</span>
+              <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                {SCENARI.find((s) => s.chiave === voti[i.id])?.breve ?? '—'}
+              </span>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </CompitoMano>
     );
   }
@@ -209,16 +289,24 @@ export function M7Mano({ sessione }: { sessione: Sessione }) {
             disabled={!complete || mio?.confermato}
             onClick={() => invia('commit.confirm', { sessioneId: sessione.id })}
           >
-            {mio?.confermato ? 'Confermato' : complete ? 'Conferma' : `Mancano ${stato.invarianti.filter((i) => !voti[i.id]).length}`}
+            {mio?.confermato ? (
+              'Confermato'
+            ) : complete ? (
+              'Conferma'
+            ) : (
+              <>
+                Mancano <span className="mono">{mancanti}</span>
+              </>
+            )}
           </button>
         </div>
       }
     >
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
         {stato.invarianti.map((i) => (
-          <div key={i.id}>
-            <div className="text-[14px] mb-1">{i.testo}</div>
-            <div className="flex gap-1">
+          <div key={i.id} className="flex flex-col gap-2">
+            <span className="text-[15px]">{i.testo}</span>
+            <div className="flex gap-2">
               {SCENARI.map((s) => (
                 <BottoneTocco
                   key={s.chiave}
@@ -228,7 +316,7 @@ export function M7Mano({ sessione }: { sessione: Sessione }) {
                     invia('commit.set', { sessioneId: sessione.id, payload: { tipo: 'M7', voti: nuovi } });
                   }}
                 >
-                  <span className="text-[12px]">{s.breve}</span>
+                  <span className="text-[13px]">{s.breve}</span>
                 </BottoneTocco>
               ))}
             </div>

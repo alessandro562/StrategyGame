@@ -114,9 +114,24 @@ button {
   border-radius: var(--radius);
 }
 
+/**
+ * Disabilitato si dice con uno scambio di colori, non con l'opacità.
+ * `opacity: 0.35` era tarata sul fondo scuro: su bianco portava il testo
+ * intorno a 2.4:1, cioè illeggibile invece che spento — e lo spegneva
+ * ovunque, dal «Blocca la decisione» all'invio della schermata d'accesso.
+ * --ink-faint sul rialzato resta sopra i 4:1: si legge, e si vede benissimo
+ * che non si può premere.
+ */
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.35;
+  color: var(--ink-faint);
+  border-color: var(--line);
+}
+
+/* Il primario disabilitato non deve conservare il riempimento d'accento,
+   altrimenti continua a sembrare il bottone da premere. */
+.bottone-primario:disabled {
+  background: var(--bg-raised);
 }
 
 input,
@@ -130,6 +145,27 @@ select {
   border-radius: var(--radius);
   padding: 6px 8px;
   outline: none;
+}
+
+/**
+ * Un cursore non è un campo di testo: la regola qui sopra gli metteva bordo,
+ * sfondo e padding, e il pollice restava sul blu di sistema, un colore fuori
+ * contratto. La sede della correzione è questa, non il modulo che per primo
+ * ha usato un cursore.
+ */
+input[type='range'] {
+  accent-color: var(--wda);
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+/* Gli altri campi segnalano il fuoco cambiando colore al bordo; il cursore un
+   bordo non ce l'ha, e senza questa regola chi naviga da tastiera non vedrebbe
+   dove si trova. */
+input[type='range']:focus-visible {
+  outline: 2px solid var(--wda-bright);
+  outline-offset: 2px;
 }
 
 input:focus,
@@ -199,15 +235,6 @@ select:focus {
   border-color: var(--wda-bright);
   background: var(--wda-wash);
   color: var(--wda-bright);
-}
-
-/* Griglia di fondo: dà profondità senza usare ombre né gradienti. */
-.griglia-fondo {
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: calc(var(--grid) * 8) calc(var(--grid) * 8);
-  opacity: 0.28;
 }
 
 .barra-scorrimento::-webkit-scrollbar {

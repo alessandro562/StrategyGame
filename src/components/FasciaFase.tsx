@@ -68,6 +68,18 @@ const TESTI: Record<StatoSessione, Testo> = {
   },
 };
 
+/**
+ * Il nome leggibile della fase. Esportato perché la barra del Tavolo e il
+ * piede della Mano mostravano la chiave grezza dell'enum (`COMMIT`,
+ * `DISCUSSIONE`) mentre questa fascia, sullo stesso schermo e a pochi
+ * centimetri di distanza, mostrava lo stesso dato tradotto («commit cieco»,
+ * «discussione»). Due nomi per la stessa cosa: la mappa sta qui, e adesso la
+ * leggono tutti.
+ */
+export function nomeFase(stato: StatoSessione): string {
+  return TESTI[stato].fase;
+}
+
 export function FasciaFase({
   sessione,
   ruolo,
@@ -77,11 +89,18 @@ export function FasciaFase({
   ruolo: 'tavolo' | 'mano';
   destra?: React.ReactNode;
 }) {
+  // Stessa griglia dello stato pieno — filetto a sinistra, titolo mono, testo a
+  // 15px — così la fascia non si sposta di tre pixel quando si apre un round.
   if (!sessione) {
     return (
-      <div className="pannello px-4 py-2 flex items-center gap-3">
-        <span className="etichetta">nessun round aperto</span>
-        <span className="text-[14px]" style={{ color: 'var(--ink-dim)' }}>
+      <div
+        className="pannello px-4 py-2 flex items-center gap-3 flex-wrap"
+        style={{ borderLeft: '3px solid var(--line-strong)' }}
+      >
+        <span className="mono text-[13px] shrink-0" style={{ color: 'var(--ink-faint)', letterSpacing: '0.08em' }}>
+          NESSUN ROUND APERTO
+        </span>
+        <span className="text-[15px] flex-1 min-w-[200px]" style={{ color: 'var(--ink-dim)' }}>
           {ruolo === 'tavolo' ? 'Apri un modulo dal pannello facilitatore.' : 'In attesa che il round venga aperto.'}
         </span>
       </div>
@@ -92,7 +111,7 @@ export function FasciaFase({
 
   return (
     <div
-      className="pannello px-4 py-2 flex items-center gap-4 flex-wrap"
+      className="pannello px-4 py-2 flex items-center gap-3 flex-wrap"
       style={{ borderLeft: `3px solid ${t.colore}` }}
     >
       <span className="mono text-[13px] shrink-0" style={{ color: t.colore, letterSpacing: '0.08em' }}>
@@ -115,15 +134,16 @@ export function FasciaFase({
 function EtichettaModo({ modo }: { modo: 'insieme' | 'ognuno' }) {
   const insieme = modo === 'insieme';
   return (
+    // Classe .etichetta invece di mono+11px+spaziatura a mano: stessa scala e
+    // stessa crenatura di tutte le altre etichette dello schermo.
     <span
-      className="mono text-[11px] shrink-0 px-2 py-1"
+      className="etichetta shrink-0 px-2 py-1"
       style={{
-        letterSpacing: '0.1em',
         border: `1px solid ${insieme ? 'var(--line-strong)' : 'var(--live)'}`,
         color: insieme ? 'var(--ink-dim)' : 'var(--live)',
       }}
     >
-      {insieme ? 'TUTTI INSIEME' : 'OGNUNO PER SÉ'}
+      {insieme ? 'tutti insieme' : 'ognuno per sé'}
     </span>
   );
 }
@@ -139,7 +159,7 @@ export function FaseMano({ sessione }: { sessione: Sessione | null }) {
   }
   const t = TESTI[sessione.stato];
   return (
-    <div className="flex items-start gap-2">
+    <div className="flex items-start gap-3">
       <EtichettaModo modo={t.modo} />
       <span className="text-[13px] flex-1" style={{ color: 'var(--ink-dim)' }}>
         {t.mano}

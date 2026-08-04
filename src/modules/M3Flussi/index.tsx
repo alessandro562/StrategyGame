@@ -49,40 +49,43 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
         titolo={servizio?.nome ?? 'La mappa dei flussi'}
         sottotitolo="Non cosa consegna: cosa collega"
         destra={
-          <div className="text-right">
-            <div className="etichetta">flussi distinti su cui siede WDA</div>
-            <div className="mono text-[36px] leading-none">{distinti}</div>
-            <div className="mono text-[13px] mt-1" style={{ color: coloreDiagnosi(distinti) }}>
+          <div className="flex flex-col items-end gap-1">
+            <span className="etichetta">flussi distinti su cui siede WDA</span>
+            <span className="mono text-[36px] leading-none">{distinti}</span>
+            <span className="text-[13px]" style={{ color: coloreDiagnosi(distinti) }}>
               {diagnosiPosizione(distinti)}
-            </div>
+            </span>
           </div>
         }
       />
 
       {!servizio && (
-        <div className="pannello p-4">
+        <div className="pannello p-4 flex flex-col gap-2">
           <span className="etichetta">servizi in nucleo o porta</span>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            {candidati.length === 0 && (
-              <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-                Nessun servizio classificato: si passa da M1.
-              </span>
-            )}
-            {candidati.map((s) => (
-              <button
-                key={s.id}
-                className="bottone p-3 text-left"
-                onClick={() => invia('session.create', { modulo: 'M3', titolo: s.nome, soggettoId: s.id, durataS: 240 })}
-              >
-                {s.nome}
-              </button>
-            ))}
-          </div>
+          {candidati.length === 0 ? (
+            <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+              Nessun servizio classificato: si passa da M1.
+            </span>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {candidati.map((s) => (
+                <button
+                  key={s.id}
+                  className="bottone p-3 text-left text-[13px]"
+                  onClick={() =>
+                    invia('session.create', { modulo: 'M3', titolo: s.nome, soggettoId: s.id, durataS: 240 })
+                  }
+                >
+                  {s.nome}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       <div className="grid grid-cols-[auto_1fr] gap-4 items-start">
-        <div className="pannello p-2" style={{ width: LATO + 16 }}>
+        <div className="pannello p-2" style={{ width: LATO + 18 }}>
           <svg
             viewBox={`0 0 ${LATO} ${LATO}`}
             width={LATO}
@@ -100,7 +103,7 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
             onPointerUp={() => setTrascinato(null)}
             onPointerLeave={() => setTrascinato(null)}
           >
-            <rect width={LATO} height={LATO} fill="var(--bg-panel)" />
+            <rect width={LATO} height={LATO} style={{ fill: 'var(--bg-deep)' }} />
             {archi.map((a) => {
               const da = stato.attori.find((x) => x.id === a.da);
               const ad = stato.attori.find((x) => x.id === a.a);
@@ -114,9 +117,9 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
                   y1={p1.cy}
                   x2={p2.cx}
                   y2={p2.cy}
-                  stroke={a.peso > 1 ? 'var(--wda-bright)' : 'var(--ink-faint)'}
-                  strokeWidth={Math.min(1 + a.peso * 1.6, 10)}
-                  opacity={a.peso > 1 ? 0.85 : 0.55}
+                  strokeWidth={Math.min(1.5 + a.peso * 1.5, 10)}
+                  strokeLinecap="round"
+                  style={{ stroke: a.peso > 1 ? 'var(--wda-bright)' : 'var(--ink-faint)' }}
                 >
                   <title>{`${da.nome} ↔ ${ad.nome} — ${a.peso} ${a.peso === 1 ? 'persona' : 'persone'}`}</title>
                 </line>
@@ -130,22 +133,28 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
                   onPointerDown={() => !a.fisso && setTrascinato(a.id)}
                   style={{ cursor: a.fisso ? 'default' : 'grab' }}
                 >
+                  <title>{a.nome}</title>
                   <circle
                     cx={cx}
                     cy={cy}
                     r={a.fisso ? RAGGIO + 6 : RAGGIO}
-                    fill={a.fisso ? 'var(--wda)' : 'var(--bg-raised)'}
-                    stroke={a.fisso ? 'var(--wda-bright)' : 'var(--line-strong)'}
-                    strokeWidth={1}
+                    strokeWidth={a.fisso ? 2 : 1.5}
+                    style={{
+                      fill: a.fisso ? 'var(--wda)' : 'var(--bg-raised)',
+                      stroke: a.fisso ? 'var(--wda-deep)' : 'var(--line-strong)',
+                    }}
                   />
                   <text
                     x={cx}
-                    y={cy + 4}
+                    y={cy}
                     textAnchor="middle"
-                    fontSize={a.fisso ? 14 : 10}
-                    fill={a.fisso ? 'var(--ink-inverso)' : 'var(--ink-dim)'}
-                    fontFamily="var(--font-mono)"
-                    style={{ pointerEvents: 'none' }}
+                    dominantBaseline="central"
+                    fontSize={12}
+                    style={{
+                      fill: a.fisso ? 'var(--ink-inverso)' : 'var(--ink)',
+                      fontFamily: 'var(--font-mono)',
+                      pointerEvents: 'none',
+                    }}
                   >
                     {a.nome.length > 12 ? `${a.nome.slice(0, 11)}…` : a.nome}
                   </text>
@@ -160,14 +169,14 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
 
           {rivelato && (
             <div className="pannello p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <span className="etichetta">vista</span>
-                <div className="flex gap-1">
-                  <button className="bottone text-[12px]" aria-pressed={!soloIo} onClick={() => setSoloIo(false)}>
-                    tutti
+                <div className="flex gap-2">
+                  <button className="bottone text-[13px]" aria-pressed={!soloIo} onClick={() => setSoloIo(false)}>
+                    Tutti
                   </button>
-                  <button className="bottone text-[12px]" aria-pressed={soloIo} onClick={() => setSoloIo(true)}>
-                    solo io
+                  <button className="bottone text-[13px]" aria-pressed={soloIo} onClick={() => setSoloIo(true)}>
+                    Solo io
                   </button>
                 </div>
               </div>
@@ -180,8 +189,8 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
                 {[...archi]
                   .sort((a, b) => b.peso - a.peso)
                   .map((a) => (
-                    <div key={`${a.da}-${a.a}`} className="flex items-center gap-2 text-[13px]">
-                      <span className="mono w-6 text-right" style={{ color: 'var(--wda-bright)' }}>
+                    <div key={`${a.da}-${a.a}`} className="flex items-baseline gap-3 text-[13px]">
+                      <span className="mono w-8 text-right shrink-0" style={{ color: 'var(--wda-bright)' }}>
                         {a.peso}
                       </span>
                       <span>
@@ -196,7 +205,7 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
 
           {servizio?.nessunFlusso && (
             <div className="pannello p-4" style={{ borderColor: 'var(--erosion)' }}>
-              <span className="mono text-[13px]" style={{ color: 'var(--erosion)' }}>
+              <span className="text-[13px]" style={{ color: 'var(--erosion)' }}>
                 {servizio.nome}: nessun arco — consulenza tradizionale in erosione
               </span>
             </div>
@@ -244,17 +253,19 @@ export function M3Mano({ sessione }: { sessione: Sessione }) {
   if (sessione.stato !== 'COMMIT') {
     return (
       <CompitoMano titolo={servizio.nome} sottotitolo="I tuoi archi, in sola lettura">
-        {archi.length === 0 ? (
-          <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-            Nessun collegamento tracciato.
-          </span>
-        ) : (
-          archi.map((a, i) => (
-            <div key={i} className="text-[14px] py-1">
-              {nomeAttore(a.da)} → {nomeAttore(a.a)}
-            </div>
-          ))
-        )}
+        <div className="flex flex-col gap-2">
+          {archi.length === 0 ? (
+            <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+              Nessun collegamento tracciato.
+            </span>
+          ) : (
+            archi.map((a, i) => (
+              <div key={i} className="text-[15px]">
+                {nomeAttore(a.da)} → {nomeAttore(a.a)}
+              </div>
+            ))
+          )}
+        </div>
       </CompitoMano>
     );
   }
@@ -302,41 +313,52 @@ export function M3Mano({ sessione }: { sessione: Sessione }) {
         </div>
       }
     >
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        {stato.attori.map((a) => (
-          <button
-            key={a.id}
-            className="px-3 text-left"
-            style={{
-              minHeight: 48,
-              border: `1px solid ${da === a.id ? 'var(--wda-bright)' : 'var(--line-strong)'}`,
-              background: da === a.id ? 'var(--wda-wash)' : 'var(--bg-raised)',
-              color: a.fisso ? 'var(--wda-bright)' : 'var(--ink)',
-            }}
-            onClick={() => tap(a.id)}
-          >
-            {a.nome}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <span className="etichetta">i tuoi archi</span>
-        {archi.length === 0 && (
-          <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-            Nessuno. Un servizio può non collegare nulla.
-          </span>
-        )}
-        {archi.map((a, i) => (
-          <div key={i} className="flex items-center justify-between gap-2 rialzato px-3 py-2">
-            <span className="text-[13px]">
-              {nomeAttore(a.da)} → {nomeAttore(a.a)}
-            </span>
-            <button className="bottone text-[12px]" onClick={() => salva((a) => a.filter((_, j) => j !== i))}>
-              ×
-            </button>
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-2">
+          <span className="etichetta">attori</span>
+          <div className="grid grid-cols-2 gap-2">
+            {stato.attori.map((a) => (
+              <button
+                key={a.id}
+                className="px-3 text-left text-[15px]"
+                aria-pressed={da === a.id}
+                style={{
+                  minHeight: 48,
+                  border: `1px solid ${da === a.id ? 'var(--wda-bright)' : 'var(--line-strong)'}`,
+                  background: da === a.id ? 'var(--wda-wash)' : 'var(--bg-raised)',
+                  color: a.fisso || da === a.id ? 'var(--wda-bright)' : 'var(--ink)',
+                }}
+                onClick={() => tap(a.id)}
+              >
+                {a.nome}
+              </button>
+            ))}
           </div>
-        ))}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="etichetta">i tuoi archi</span>
+          {archi.length === 0 && (
+            <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+              Nessuno. Un servizio può non collegare nulla.
+            </span>
+          )}
+          {archi.map((a, i) => (
+            <div key={i} className="flex items-center justify-between gap-3 rialzato pl-3 pr-1">
+              <span className="text-[15px]">
+                {nomeAttore(a.da)} → {nomeAttore(a.a)}
+              </span>
+              <button
+                className="bottone text-[15px] shrink-0"
+                style={{ minHeight: 48, minWidth: 48 }}
+                aria-label={`Rimuovi ${nomeAttore(a.da)} → ${nomeAttore(a.a)}`}
+                onClick={() => salva((a) => a.filter((_, j) => j !== i))}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
     </CompitoMano>
   );
