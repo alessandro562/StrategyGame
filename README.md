@@ -26,7 +26,13 @@ L'app accetta due nomenclature, perché cambiano a seconda di come è collegato 
 
 **Se mancano entrambe, su Vercel l'app si rifiuta di partire** e lo dice in chiaro. È voluto: lì lo store in memoria non fallirebbe, farebbe di peggio — ogni invocazione atterra su un'istanza diversa, quindi perderebbe commit a caso e ve ne accorgereste al reveal. La home mostra `redis collegato` o `redis non configurato`: è il primo posto da guardare dopo un deploy.
 
-Il codice sta sul branch `claude/wda-tool-logo-colors-j21j5o`. Vercel come branch di produzione usa `main`: o si porta il codice su `main`, o si cambia **Settings → Git → Production Branch**.
+**Tenere `next` aggiornato.** Quando una versione di Next ha una vulnerabilità nota, npm la marca deprecata e **Vercel rifiuta di deployarla**: il build compila fino in fondo, stampa la tabella delle route, e poi il deployment fallisce senza che il log dica granché. Se succede, il sintomo è un `npm warn deprecated next@<versione>: This version has a security vulnerability` fra le prime righe del log. Si verifica con:
+
+```bash
+npm view next@$(node -p "require('./package.json').dependencies.next.replace('^','')") deprecated
+```
+
+Vuoto significa che va bene; una frase significa che serve aggiornare.
 
 ## Le due viste
 
