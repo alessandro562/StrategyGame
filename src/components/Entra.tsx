@@ -69,7 +69,7 @@ export function Entra({
       className={compatto ? 'flex-1 flex flex-col justify-center' : 'min-h-[100dvh] flex items-center justify-center p-5'}
       style={{ background: 'var(--bg-deep)' }}
     >
-      <div className="w-full" style={{ maxWidth: 380 }}>
+      <div className="pannello w-full" style={{ maxWidth: 400, padding: 32 }}>
         <div className="mb-6">
           <Logo altezza={30} />
           <p className="m-0 mt-3 text-[15px]" style={{ color: 'var(--ink-dim)' }}>
@@ -103,7 +103,7 @@ export function Entra({
 
         <form onSubmit={invia} className="flex flex-col gap-5">
           {modo === 'registra' && (
-            <Campo etichetta="come ti chiami">
+            <Campo etichetta="Come ti chiami">
               <input
                 className="w-full text-[16px]"
                 style={{ minHeight: 48 }}
@@ -133,7 +133,7 @@ export function Entra({
             </Campo>
           )}
 
-          <Campo etichetta="email">
+          <Campo etichetta="Email">
             <input
               className="w-full text-[16px]"
               style={{ minHeight: 48 }}
@@ -150,7 +150,7 @@ export function Entra({
           </Campo>
 
           <Campo
-            etichetta="password"
+            etichetta="Password"
             aiuto={modo === 'registra' ? 'Almeno 4 caratteri. Serve solo a ritrovarti, scegline una facile.' : undefined}
           >
             <input
@@ -185,7 +185,7 @@ export function Entra({
         </form>
 
         <p className="m-0 mt-6 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-          L’accesso serve a sapere di chi è ogni posizione. Durante il commit cieco nessuno vede le risposte degli
+          L’accesso serve a sapere di chi è ogni posizione. Quando si risponde in cieco nessuno vede le risposte degli
           altri, nemmeno chi proietta.
         </p>
       </div>
@@ -204,7 +204,9 @@ function Campo({
 }) {
   return (
     <label className="flex flex-col gap-2">
-      <span className="etichetta">{etichetta}</span>
+      <span className="text-[13px]" style={{ color: 'var(--ink)', fontWeight: 500 }}>
+        {etichetta}
+      </span>
       {children}
       {aiuto && (
         <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>

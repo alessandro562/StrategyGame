@@ -1,18 +1,35 @@
 'use client';
 
 /**
- * M5 — Le carte avversarie.
+ * M5 — Stress test competitivo.
  * Il timer è il meccanismo, non decorazione: distingue "abbiamo una risposta"
- * da "ce la costruiamo mentre parliamo".
+ * da "ce la costruiamo mentre parliamo". Per questo lo schermo dice sempre
+ * quanti secondi si hanno, chi parla e chi vota: sono le tre cose che, senza
+ * scriverle, si contrattano a voce mentre il tempo scorre.
  */
 
+import type { ReactNode } from 'react';
+import { MODULI, TERMINI } from '@/lib/glossario';
 import type { Sessione } from '@/lib/types';
-import { CompitoMano, Intestazione, Vuoto } from '../comune';
+import { CompitoMano, Vuoto } from '../comune';
+import { TestataModulo, TestataModuloMano } from '@/components/TestataModulo';
 import { Timer } from '@/components/Timer';
 import { useRevealPartito } from '@/components/RevealStage';
 import { useStore } from '@/net/useStore';
 
 export const DURATA_RISPOSTA_S = 90;
+
+/** Una riga asciutta che dice cosa si fa adesso, senza incoraggiamenti. */
+function Istruzione({ children, centrata }: { children: ReactNode; centrata?: boolean }) {
+  return (
+    <p
+      className={`m-0 text-[13px] max-w-[42rem] ${centrata ? 'text-center' : ''}`}
+      style={{ color: 'var(--ink-dim)' }}
+    >
+      {children}
+    </p>
+  );
+}
 
 export function M5Tavolo({ sessione }: { sessione: Sessione }) {
   const ctx = useStore();
@@ -35,9 +52,14 @@ export function M5Tavolo({ sessione }: { sessione: Sessione }) {
 
     return (
       <div className="flex flex-col gap-4">
-        <Intestazione modulo="M5" titolo="Le carte avversarie" sottotitolo="Il facilitatore pesca" />
+        <TestataModulo modulo="M5" />
+        <Istruzione>
+          Apri il round su un concorrente. Chi risponde è indicato sulla carta: avrà{' '}
+          <span className="mono">{DURATA_RISPOSTA_S}</span> secondi per rispondere a voce, poi gli altri votano dal
+          telefono se la risposta regge.
+        </Istruzione>
         {mazzo.length === 0 ? (
-          <Vuoto>Mazzo esaurito.</Vuoto>
+          <Vuoto>Sono già passati tutti i concorrenti.</Vuoto>
         ) : (
           <div className="grid grid-cols-3 gap-3">
             {mazzo.map((c) => (
@@ -58,6 +80,12 @@ export function M5Tavolo({ sessione }: { sessione: Sessione }) {
                 <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
                   {c.descrizione}
                 </span>
+                {/* Il bordo rosso da solo non si spiega: la carta fissa va detta. */}
+                {c.fisso && (
+                  <span className="etichetta" style={{ color: 'var(--erosion)' }}>
+                    carta obbligatoria
+                  </span>
+                )}
                 {rispondente && (
                   <span className="flex items-baseline gap-2">
                     <span className="etichetta">risponde</span>
@@ -82,10 +110,20 @@ export function M5Tavolo({ sessione }: { sessione: Sessione }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Intestazione
+      <TestataModulo
         modulo="M5"
-        titolo={carta.nome}
-        sottotitolo={sessione.rispondenteId ? `Risponde ${nome(sessione.rispondenteId)}` : undefined}
+        soggetto={carta.nome}
+        destra={
+          sessione.rispondenteId ? (
+            <div className="text-right shrink-0">
+              <div className="etichetta">risponde a voce</div>
+              <div className="text-[17px] mt-1">{nome(sessione.rispondenteId)}</div>
+              <div className="text-[13px] mt-1" style={{ color: 'var(--ink-dim)' }}>
+                <span className="mono">{DURATA_RISPOSTA_S}</span> secondi
+              </div>
+            </div>
+          ) : undefined
+        }
       />
 
       <div className="pannello p-4 flex flex-col gap-4">
@@ -111,18 +149,21 @@ export function M5Tavolo({ sessione }: { sessione: Sessione }) {
       </div>
 
       {sessione.stato === 'SETUP' && (
-        <div className="pannello p-4 flex items-center gap-2 flex-wrap">
-          <span className="etichetta mr-1">chi risponde</span>
-          {presenti.map((p) => (
-            <button
-              key={p.id}
-              className="bottone text-[13px]"
-              aria-pressed={sessione.rispondenteId === p.id}
-              onClick={() => invia('session.setRispondente', { sessioneId: sessione.id, rispondenteId: p.id })}
-            >
-              {p.nome}
-            </button>
-          ))}
+        <div className="pannello p-4 flex flex-col gap-3">
+          <Istruzione>Indica chi risponde a voce, prima di far partire il tempo. Chi risponde poi non vota.</Istruzione>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="etichetta mr-1">chi risponde</span>
+            {presenti.map((p) => (
+              <button
+                key={p.id}
+                className="bottone text-[13px]"
+                aria-pressed={sessione.rispondenteId === p.id}
+                onClick={() => invia('session.setRispondente', { sessioneId: sessione.id, rispondenteId: p.id })}
+              >
+                {p.nome}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -130,10 +171,22 @@ export function M5Tavolo({ sessione }: { sessione: Sessione }) {
       {(sessione.stato === 'SETUP' || sessione.stato === 'COMMIT') && (
         <div className="pannello p-8 flex flex-col items-center gap-4">
           <p className="m-0 text-[22px] text-center">Perché un cliente sceglie noi e non loro?</p>
+          <Istruzione centrata>
+            {sessione.stato === 'SETUP' ? (
+              <>
+                Si risponde a voce, adesso, senza preparazione. Il tempo parte quando il facilitatore apre il round e
+                dura <span className="mono">{DURATA_RISPOSTA_S}</span> secondi.
+              </>
+            ) : (
+              <>
+                Finita la risposta, ognuno vota dal telefono se regge. Chi ha risposto non vota.
+              </>
+            )}
+          </Istruzione>
           <Timer sessione={sessione} ora={ora} grande />
           {sessione.stato === 'COMMIT' && (
             <div className="flex items-baseline gap-2">
-              <span className="etichetta">voto in corso</span>
+              <span className="etichetta">hanno votato</span>
               <span className="mono text-[15px]">
                 {statoCommit?.committed ?? 0} su {statoCommit?.total ?? presenti.length}
               </span>
@@ -147,21 +200,36 @@ export function M5Tavolo({ sessione }: { sessione: Sessione }) {
           className="pannello p-8 flex flex-col items-center gap-6"
           style={{ opacity: partito ? 1 : 0, transition: 'opacity 200ms' }}
         >
+          <Istruzione centrata>
+            Voti sulla risposta appena data a voce. Chi ha risposto non ha votato.
+          </Istruzione>
+
           <div className="grid grid-cols-2 gap-12">
             <Conteggio etichetta="convincente" valore={convincenti} colore="var(--live)" />
             <Conteggio etichetta="non convincente" valore={contrari} colore="var(--erosion)" />
           </div>
 
-          <span className="text-[15px]" style={{ color: coloreEsito }}>
-            {esito}
-          </span>
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-[15px]" style={{ color: coloreEsito }}>
+              {esito}
+            </span>
+            {/* L'esito non resta mai senza la regola che lo produce: la parola
+                «vulnerabilità» arriva dal glossario, non da qui. */}
+            <Istruzione centrata>
+              {voti.length === 0
+                ? 'Nessun voto registrato: la carta resta senza esito.'
+                : aperta
+                  ? `${TERMINI['vulnerabilità']} Resta in vista nei moduli successivi finché non si chiude.`
+                  : 'Una carta si apre come vulnerabilità quando più della metà dei voti dice non convincente.'}
+            </Istruzione>
+          </div>
 
           {sessione.stato !== 'LOCKED' && (
             <button
               className="bottone"
               onClick={() => invia('session.setState', { sessioneId: sessione.id, stato: 'LOCKED' })}
             >
-              Chiudi la carta
+              Registra l’esito e chiudi la carta
             </button>
           )}
         </div>
@@ -192,15 +260,36 @@ export function M5Mano({ sessione }: { sessione: Sessione }) {
 
   if (sessione.stato !== 'COMMIT') {
     return (
-      <CompitoMano titolo={carta?.nome ?? 'Carta avversaria'} sottotitolo={sonoIoARispondere ? 'Tocca a te rispondere' : 'In attesa del voto'}>
-        {mio?.payload.tipo === 'M5' && (
-          <span className="text-[15px]" style={{ color: 'var(--ink-dim)' }}>
-            Hai votato:{' '}
-            <span style={{ color: mio.payload.convincente ? 'var(--live)' : 'var(--erosion)' }}>
-              {mio.payload.convincente ? 'convincente' : 'non convincente'}
+      <CompitoMano
+        titolo={carta?.nome ?? 'Concorrente'}
+        sottotitolo={MODULI.M5.nome.toLowerCase()}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="m-0 text-[15px]" style={{ color: 'var(--ink-dim)' }}>
+            {sessione.stato === 'SETUP' ? (
+              sonoIoARispondere ? (
+                <>
+                  Tocca a te: rispondi a voce alla domanda sullo schermo grande. Hai{' '}
+                  <span className="mono">{DURATA_RISPOSTA_S}</span> secondi, poi votano gli altri.
+                </>
+              ) : (
+                <>
+                  Ascolta la risposta. Quando il tempo finisce, qui compaiono i due bottoni per votare.
+                </>
+              )
+            ) : (
+              <>Il voto è chiuso. Il confronto si guarda sullo schermo grande.</>
+            )}
+          </p>
+          {mio?.payload.tipo === 'M5' && (
+            <span className="text-[15px]" style={{ color: 'var(--ink-dim)' }}>
+              Hai votato:{' '}
+              <span style={{ color: mio.payload.convincente ? 'var(--live)' : 'var(--erosion)' }}>
+                {mio.payload.convincente ? 'convincente' : 'non convincente'}
+              </span>
             </span>
-          </span>
-        )}
+          )}
+        </div>
       </CompitoMano>
     );
   }
@@ -209,7 +298,7 @@ export function M5Mano({ sessione }: { sessione: Sessione }) {
     return (
       <div className="flex-1 flex items-center justify-center px-6">
         <p className="m-0 text-center text-[15px]" style={{ color: 'var(--ink-dim)' }}>
-          Hai risposto tu: non voti su te stesso.
+          Hai risposto tu: non voti su te stesso. Stanno votando gli altri.
         </p>
       </div>
     );
@@ -225,12 +314,12 @@ export function M5Mano({ sessione }: { sessione: Sessione }) {
 
   return (
     <div className="flex-1 flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <span className="etichetta">carta avversaria</span>
-        <span className="text-[17px]">{carta?.nome}</span>
-      </div>
+      <TestataModuloMano modulo="M5" soggetto={carta?.nome} />
+      <Istruzione>
+        Vota la risposta appena data a voce. Nessuno la vede finché il round non passa al confronto.
+      </Istruzione>
       <button
-        className="flex-1 text-[22px]"
+        className="flex-1 flex flex-col items-center justify-center gap-2 px-4 text-[22px]"
         style={{
           minHeight: 48,
           border: `1px solid ${scelto === true ? 'var(--live)' : 'var(--line-strong)'}`,
@@ -241,9 +330,15 @@ export function M5Mano({ sessione }: { sessione: Sessione }) {
         onClick={() => vota(true)}
       >
         Convincente
+        <span
+          className="text-[13px] text-center"
+          style={{ color: scelto === true ? 'var(--ink-inverso)' : 'var(--ink-dim)' }}
+        >
+          Questa risposta la userei davanti a un cliente
+        </span>
       </button>
       <button
-        className="flex-1 text-[22px]"
+        className="flex-1 flex flex-col items-center justify-center gap-2 px-4 text-[22px]"
         style={{
           minHeight: 48,
           border: `1px solid ${scelto === false ? 'var(--erosion)' : 'var(--line-strong)'}`,
@@ -254,6 +349,12 @@ export function M5Mano({ sessione }: { sessione: Sessione }) {
         onClick={() => vota(false)}
       >
         Non convincente
+        <span
+          className="text-[13px] text-center"
+          style={{ color: scelto === false ? 'var(--ink-inverso)' : 'var(--ink-dim)' }}
+        >
+          Ce la stiamo costruendo adesso: resta una vulnerabilità aperta
+        </span>
       </button>
     </div>
   );

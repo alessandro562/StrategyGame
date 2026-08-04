@@ -1,10 +1,15 @@
 'use client';
 
 /**
- * M1 — Lo smontaggio. Il modulo centrale: tutto il resto dipende dal suo output.
+ * M1 — Unbundling del servizio. Il modulo centrale: tutto il resto dipende dal
+ * suo output.
  *
- * Passo 1 scomposizione (plenaria) · passo 2 destinazione (commit cieco)
- * passo 3 reveal · passo 4 il residuo · passo 5 lock nei tre bucket.
+ * Passo 1 scomposizione (plenaria) · passo 2 destinazione (risposta in cieco)
+ * passo 3 confronto · passo 4 il residuo umano · passo 5 lock nei tre bucket.
+ *
+ * Nomi, obiettivo e glosse dei termini vengono tutti da lib/glossario: qui non
+ * si riscrive nessuna etichetta a mano. Gli enum (AI, UMANO, MORTA, NUCLEO…)
+ * restano il modello dati e non compaiono mai a schermo.
  *
  * Scala tipografica del modulo, tre gradini: .etichetta (11px, mono) per le
  * intestazioni di colonna e le unità, 13px per le righe dense — dentro una
@@ -13,35 +18,86 @@
  * Il residuo resta l'unico numero grande della schermata.
  */
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { esitiServizio, type EsitoAttivita } from '@/lib/calc';
+import { BUCKET_GLOSSA, DESTINAZIONI_GLOSSA, TERMINI } from '@/lib/glossario';
 import { SCOMPOSIZIONI_SUGGERITE } from '@/lib/seed';
 import type { Bucket, Destinazione, Servizio, Sessione } from '@/lib/types';
-import { BottoneTocco, COLORE_DESTINAZIONE, CompitoMano, Intestazione, Premessa, StatoCommitMano, Vuoto } from '../comune';
+import { BottoneTocco, COLORE_DESTINAZIONE, CompitoMano, Premessa, StatoCommitMano, Vuoto } from '../comune';
 import { CommitBar } from '@/components/CommitBar';
 import { DivergenceList } from '@/components/DivergenceList';
 import { LockButton } from '@/components/LockButton';
 import { RevealStage, useRevealPartito } from '@/components/RevealStage';
+import { TestataModulo } from '@/components/TestataModulo';
 import { useBozzaCommit } from '@/net/useBozza';
 import { useStore } from '@/net/useStore';
 
 const DESTINAZIONI: Destinazione[] = ['AI', 'UMANO', 'MORTA'];
 
-const RISPOSTE: { chiave: 'MENO' | 'UGUALE_O_PIU' | 'NIENTE'; testo: string; bucket: Bucket; significato: string }[] = [
-  {
-    chiave: 'MENO',
-    testo: 'Meno del vecchio prezzo',
-    bucket: 'PORTA',
-    significato: 'In commoditizzazione. Si tiene solo se apre relazioni — e si regala',
-  },
-  {
-    chiave: 'UGUALE_O_PIU',
-    testo: 'Uguale o più',
-    bucket: 'NUCLEO',
-    significato: 'Facevate pagare la parte sbagliata. Stesso prezzo, un decimo del lavoro',
-  },
-  { chiave: 'NIENTE', testo: 'Niente', bucket: 'CHIUSO', significato: 'Il servizio muore' },
+const RISPOSTE: { chiave: 'MENO' | 'UGUALE_O_PIU' | 'NIENTE'; testo: string; bucket: Bucket }[] = [
+  { chiave: 'MENO', testo: 'Meno del vecchio prezzo', bucket: 'PORTA' },
+  { chiave: 'UGUALE_O_PIU', testo: 'Uguale o più', bucket: 'NUCLEO' },
+  { chiave: 'NIENTE', testo: 'Niente', bucket: 'CHIUSO' },
 ];
+
+/** Il nome del bucket con il termine standard che aiuta a riconoscerlo. */
+function etichettaBucket(b: Bucket | null): string {
+  if (!b) return '—';
+  return `${BUCKET_GLOSSA[b].etichetta} (${BUCKET_GLOSSA[b].standard})`;
+}
+
+/** Conteggi dei voti scritti con i nomi delle destinazioni, non con gli enum. */
+function dettaglioVoti(conteggi: Record<Destinazione, number>): string {
+  return DESTINAZIONI.filter((d) => conteggi[d] > 0)
+    .map((d) => `${conteggi[d]} ${DESTINAZIONI_GLOSSA[d].etichetta}`)
+    .join(' / ');
+}
+
+/** Come sopra, ma a schermo: le cifre in mono, i nomi nel carattere di interfaccia. */
+function DettaglioVoti({ conteggi }: { conteggi: Record<Destinazione, number> }) {
+  const voci = DESTINAZIONI.filter((d) => conteggi[d] > 0);
+  return (
+    <>
+      {voci.map((d, i) => (
+        <span key={d}>
+          {i > 0 ? ' / ' : ''}
+          <span className="mono">{conteggi[d]}</span> {DESTINAZIONI_GLOSSA[d].etichetta}
+        </span>
+      ))}
+    </>
+  );
+}
+
+/** Una riga asciutta che dice cosa si fa adesso, sopra il compito. */
+function Istruzione({ children }: { children: ReactNode }) {
+  return (
+    <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+      {children}
+    </p>
+  );
+}
+
+/** Le tre destinazioni con la loro glossa: si legge una volta, vale per tutte le righe. */
+function LegendaDestinazioni({ variante }: { variante: 'tavolo' | 'mano' }) {
+  const tavolo = variante === 'tavolo';
+  return (
+    <div
+      className={tavolo ? 'grid grid-cols-3 gap-x-6 gap-y-2' : 'rialzato px-3 py-3 flex flex-col gap-2'}
+      style={tavolo ? { borderTop: '1px solid var(--line)', paddingTop: 12 } : undefined}
+    >
+      {DESTINAZIONI.map((d) => (
+        <div key={d} className="flex flex-col gap-0.5 min-w-0">
+          <span className="text-[13px]" style={{ color: COLORE_DESTINAZIONE[d] }}>
+            {DESTINAZIONI_GLOSSA[d].etichetta}
+          </span>
+          <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+            {DESTINAZIONI_GLOSSA[d].aiuto}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* Tavolo                                                              */
@@ -67,10 +123,9 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Intestazione
+      <TestataModulo
         modulo="M1"
-        titolo={servizio.nome}
-        sottotitolo="Lo smontaggio"
+        soggetto={servizio.nome}
         destra={
           <div className="text-right">
             <div className="etichetta">fatturato 12m</div>
@@ -85,6 +140,10 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
 
       {sessione.stato === 'COMMIT' && (
         <>
+          <Istruzione>
+            Ognuno assegna sul proprio telefono ogni attività a chi la farà d’ora in poi. Nessuno vede le
+            risposte degli altri finché il round non passa al confronto.
+          </Istruzione>
           <CommitBar stato={statoCommit} presenti={presenti} nome={nome} />
           <BarraAttivita esiti={esiti} cieca />
         </>
@@ -93,6 +152,10 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
       {(sessione.stato === 'REVEAL' || sessione.stato === 'DISCUSSIONE' || sessione.stato === 'LOCKED') && (
         <>
           <div className="pannello p-4 flex flex-col gap-3">
+            <Istruzione>
+              Una riga per attività: quanta parte del prezzo regge, come l’ha assegnata il gruppo e dove le
+              risposte non coincidono.
+            </Istruzione>
             <IntestazioneEsiti />
             <RevealStage
               elementi={esiti.esiti}
@@ -102,6 +165,7 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
               className="flex flex-col gap-2"
               render={(e) => <RigaEsito esito={e} />}
             />
+            <LegendaDestinazioni variante="tavolo" />
           </div>
 
           <BarraAttivita esiti={esiti} />
@@ -115,6 +179,11 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
               >
                 {esiti.residuoPct.toFixed(0)}%
               </div>
+              {/* Il numero dominante della schermata non resta mai senza la sua
+                  definizione: la glossa arriva dal glossario, non da qui. */}
+              <p className="m-0 text-[13px] text-center max-w-[34rem]" style={{ color: 'var(--ink-dim)' }}>
+                {TERMINI['residuo umano']}
+              </p>
               {esiti.quoteInPareggio > 0 && (
                 <p className="m-0 text-[13px] text-center" style={{ color: 'var(--tension)' }}>
                   <span className="mono">{esiti.quoteInPareggio}%</span> delle quote in pareggio, fuori dal residuo
@@ -132,9 +201,7 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
                 .filter((e) => e.divergente)
                 .map((e) => ({
                   etichetta: e.nome,
-                  dettaglio: DESTINAZIONI.filter((d) => e.conteggi[d] > 0)
-                    .map((d) => `${e.conteggi[d]} ${d}`)
-                    .join(' / '),
+                  dettaglio: dettaglioVoti(e.conteggi),
                   intensita:
                     e.votanti > 0 ? 1 - Math.max(...DESTINAZIONI.map((d) => e.conteggi[d])) / e.votanti : 0,
                 }))}
@@ -144,10 +211,14 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
           {sessione.stato !== 'LOCKED' && (
             <div className="pannello p-4 flex flex-col gap-3">
               <p className="m-0 text-[17px]">Il residuo, venduto da solo, quanto vale?</p>
+              <Istruzione>
+                Scegliete una risposta insieme: decide in quale dei tre bucket finisce il servizio.
+              </Istruzione>
               <div className="grid grid-cols-3 gap-2">
                 {RISPOSTE.map((r) => {
                   const attiva = servizio.valoreResiduo === r.chiave;
                   const spento = r.bucket === 'CHIUSO' && !chiPropone;
+                  const glossa = BUCKET_GLOSSA[r.bucket];
                   return (
                     <button
                       key={r.chiave}
@@ -171,16 +242,19 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
                           questo il bottone inerte resterebbe acceso come gli
                           altri due. */}
                       <span
-                        className="mono text-[13px]"
+                        className="text-[13px]"
                         style={{ color: spento ? 'var(--ink-faint)' : coloreBucket(r.bucket) }}
                       >
-                        {r.bucket}
+                        {glossa.etichetta}{' '}
+                        <span style={{ color: spento ? 'var(--ink-faint)' : 'var(--ink-dim)' }}>
+                          ({glossa.standard})
+                        </span>
                       </span>
                       <span
                         className="text-[13px]"
                         style={{ color: spento ? 'var(--ink-faint)' : 'var(--ink-dim)' }}
                       >
-                        {r.significato}
+                        {glossa.aiuto}
                       </span>
                     </button>
                   );
@@ -200,7 +274,9 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
                     </option>
                   ))}
                 </select>
-                <span>Un servizio non si chiude per inerzia.</span>
+                <span>
+                  Finché nessuno la richiede, «Niente» resta spento: un servizio non si chiude per inerzia.
+                </span>
               </label>
 
               <LockButton
@@ -240,7 +316,8 @@ function SceltaServizio({ sessione }: { sessione: Sessione }) {
   if (!stato) return null;
   return (
     <div className="flex flex-col gap-4">
-      <Intestazione modulo="M1" titolo="Lo smontaggio" sottotitolo="Quale servizio si smonta adesso?" />
+      <TestataModulo modulo="M1" />
+      <Istruzione>Scegli il servizio da scomporre in questo round.</Istruzione>
       <div className="grid grid-cols-3 gap-2">
         {stato.servizi.map((s) => (
           <button
@@ -251,8 +328,8 @@ function SceltaServizio({ sessione }: { sessione: Sessione }) {
             }
           >
             <span className="text-[15px]">{s.nome}</span>
-            <span className="mono text-[13px]" style={{ color: coloreBucket(s.bucket) }}>
-              {s.bucket ?? 'non smontato'}
+            <span className="text-[13px]" style={{ color: coloreBucket(s.bucket) }}>
+              {s.bucket ? etichettaBucket(s.bucket) : 'non ancora scomposto'}
             </span>
           </button>
         ))}
@@ -277,6 +354,11 @@ function Scomposizione({ servizio, sommaQuote }: { servizio: Servizio; sommaQuot
         La quota è del <strong>prezzo</strong>, non dello sforzo. Sono cose diverse, ed è la differenza tra le due
         che stiamo cercando.
       </Premessa>
+
+      <Istruzione>
+        Elencate insieme le attività che compongono il servizio e assegnate a ognuna la quota di prezzo che
+        regge. Le quote devono sommare a 100.
+      </Istruzione>
 
       <div className="flex flex-col gap-2">
         {servizio.attivita.map((a, i) => (
@@ -393,7 +475,7 @@ function IntestazioneEsiti() {
       <span className="etichetta flex-1 min-w-0">attività</span>
       <span className="etichetta w-12 shrink-0 text-right">quota</span>
       <span className="etichetta w-40 shrink-0">voti</span>
-      <span className="etichetta w-28 shrink-0">esito</span>
+      <span className="etichetta w-28 shrink-0">destinazione</span>
       <span className="etichetta w-52 shrink-0">divergenza</span>
     </div>
   );
@@ -420,24 +502,20 @@ function RigaEsito({ esito }: { esito: EsitoAttivita }) {
                 width: `${(esito.conteggi[d] / Math.max(totale, 1)) * 100}%`,
                 background: d === 'MORTA' ? undefined : COLORE_DESTINAZIONE[d],
               }}
-              title={`${esito.conteggi[d]} ${d}`}
+              title={`${esito.conteggi[d]} ${DESTINAZIONI_GLOSSA[d].etichetta}`}
             />
           ) : null,
         )}
       </div>
       <span
-        className="mono text-[13px] w-28 shrink-0"
+        className="text-[13px] w-28 shrink-0"
         style={{ color: esito.esito ? COLORE_DESTINAZIONE[esito.esito] : 'var(--tension)' }}
       >
-        {esito.esito ?? 'pareggio'}
+        {esito.esito ? DESTINAZIONI_GLOSSA[esito.esito].etichetta : 'pareggio'}
       </span>
       {/* Colonna sempre presente, anche vuota: le righe restano incolonnate. */}
-      <span className="mono text-[13px] w-52 shrink-0 whitespace-nowrap" style={{ color: 'var(--tension)' }}>
-        {esito.divergente
-          ? DESTINAZIONI.filter((d) => esito.conteggi[d] > 0)
-              .map((d) => `${esito.conteggi[d]} ${d}`)
-              .join(' / ')
-          : ''}
+      <span className="text-[13px] w-52 shrink-0 whitespace-nowrap" style={{ color: 'var(--tension)' }}>
+        {esito.divergente ? <DettaglioVoti conteggi={esito.conteggi} /> : ''}
       </span>
     </div>
   );
@@ -477,7 +555,7 @@ function BarraAttivita({ esiti, cieca = false }: { esiti: ReturnType<typeof esit
               borderRight: '1px solid var(--bg-deep)',
               background: riempimento ?? (divergente || morta ? undefined : 'var(--bg-raised)'),
             }}
-            title={`${e.nome} — ${e.esito ?? 'pareggio'}`}
+            title={`${e.nome} — ${e.esito ? DESTINAZIONI_GLOSSA[e.esito].etichetta : 'pareggio'}`}
           >
             <span
               className="mono text-[11px]"
@@ -492,7 +570,7 @@ function BarraAttivita({ esiti, cieca = false }: { esiti: ReturnType<typeof esit
   );
 }
 
-/** Vista di confronto: tutti i servizi smontati, barre affiancate. */
+/** Vista di confronto: tutti i servizi già scomposti, barre affiancate. */
 function Confronto({ ordinaPerResiduo, onOrdina }: { ordinaPerResiduo: boolean; onOrdina: () => void }) {
   const { stato } = useStore();
   if (!stato) return null;
@@ -513,12 +591,15 @@ function Confronto({ ordinaPerResiduo, onOrdina }: { ordinaPerResiduo: boolean; 
 
   return (
     <div className="pannello p-4">
-      <div className="flex items-baseline justify-between mb-3">
-        <span className="etichetta">servizi già smontati</span>
+      <div className="flex items-baseline justify-between gap-3 mb-1">
+        <span className="etichetta">servizi già scomposti</span>
         <button className="bottone text-[13px]" aria-pressed={ordinaPerResiduo} onClick={onOrdina}>
-          Ordina per residuo
+          Ordina per residuo umano
         </button>
       </div>
+      <p className="m-0 mb-3 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+        {TERMINI['residuo umano']}
+      </p>
       <div className="flex flex-col gap-2">
         {ordinate.map((r) => (
           <div key={r.servizio.id} className="flex items-center gap-3">
@@ -530,8 +611,8 @@ function Confronto({ ordinaPerResiduo, onOrdina }: { ordinaPerResiduo: boolean; 
               <div className="h-full" style={{ width: `${r.residuo}%`, background: 'var(--live)' }} />
             </div>
             <span className="mono text-[13px] w-12 shrink-0 text-right">{r.residuo.toFixed(0)}%</span>
-            <span className="mono text-[13px] w-20 shrink-0" style={{ color: coloreBucket(r.servizio.bucket) }}>
-              {r.servizio.bucket ?? '—'}
+            <span className="text-[13px] w-36 shrink-0 truncate" style={{ color: coloreBucket(r.servizio.bucket) }}>
+              {etichettaBucket(r.servizio.bucket)}
             </span>
           </div>
         ))}
@@ -553,23 +634,23 @@ export function M1Mano({ sessione }: { sessione: Sessione }) {
   const dalServer = (mio?.payload.tipo === 'M1' ? mio.payload.destinazioni : {}) as Record<string, Destinazione>;
   const [scelte, aggiornaScelte] = useBozzaCommit(sessione.id, dalServer);
 
-  if (!stato || !servizio) return <Vuoto>Nessun servizio in smontaggio.</Vuoto>;
+  if (!stato || !servizio) return <Vuoto>Nessun servizio in scomposizione.</Vuoto>;
 
   const complete = servizio.attivita.every((a) => scelte[a.id]);
   const mancanti = servizio.attivita.filter((a) => !scelte[a.id]).length;
 
   if (sessione.stato !== 'COMMIT') {
     return (
-      <CompitoMano titolo={servizio.nome} sottotitolo="Il tuo commit, in sola lettura">
+      <CompitoMano titolo={servizio.nome} sottotitolo="Le tue risposte, in sola lettura">
         <div className="flex flex-col gap-2">
           {servizio.attivita.map((a) => (
             <div key={a.id} className="flex items-center justify-between gap-3 px-3 py-3 rialzato">
               <span className="text-[15px] flex-1 min-w-0">{a.nome}</span>
               <span
-                className="mono text-[13px] shrink-0"
+                className="text-[13px] shrink-0"
                 style={{ color: scelte[a.id] ? COLORE_DESTINAZIONE[scelte[a.id]] : 'var(--ink-faint)' }}
               >
-                {scelte[a.id] ?? '—'}
+                {scelte[a.id] ? DESTINAZIONI_GLOSSA[scelte[a.id]].etichetta : '—'}
               </span>
             </div>
           ))}
@@ -586,7 +667,7 @@ export function M1Mano({ sessione }: { sessione: Sessione }) {
   return (
     <CompitoMano
       titolo={servizio.nome}
-      sottotitolo="Dove va a finire ogni attività?"
+      sottotitolo="Assegna ogni attività a chi la farà d’ora in poi"
       azione={
         <div className="flex flex-col gap-2">
           <StatoCommitMano confermato={mio?.confermato ?? false} />
@@ -602,7 +683,7 @@ export function M1Mano({ sessione }: { sessione: Sessione }) {
               'Conferma'
             ) : (
               <>
-                Mancano <span className="mono">{mancanti}</span>
+                {mancanti === 1 ? 'Manca' : 'Mancano'} <span className="mono">{mancanti}</span> da assegnare
               </>
             )}
           </button>
@@ -610,6 +691,10 @@ export function M1Mano({ sessione }: { sessione: Sessione }) {
       }
     >
       <div className="flex flex-col gap-4">
+        {/* La legenda sta in cima una volta sola: ripetere le tre glosse sotto
+            ogni attività allungherebbe la lista senza aggiungere nulla. */}
+        <LegendaDestinazioni variante="mano" />
+
         {servizio.attivita.map((a) => (
           <div key={a.id}>
             <div className="text-[15px] mb-2">{a.nome}</div>
@@ -621,7 +706,7 @@ export function M1Mano({ sessione }: { sessione: Sessione }) {
                   colore={COLORE_DESTINAZIONE[d]}
                   onClick={() => imposta(a.id, d)}
                 >
-                  {d}
+                  <span className="text-[15px]">{DESTINAZIONI_GLOSSA[d].etichetta}</span>
                 </BottoneTocco>
               ))}
             </div>

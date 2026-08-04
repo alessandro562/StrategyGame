@@ -1,17 +1,24 @@
 'use client';
 
 /**
- * M3 — La mappa dei flussi.
+ * M3 — Mappa dell'ecosistema.
  * Serve a verificare o smentire l'ipotesi che WDA sia un layer fra operatori:
  * è una domanda a cui non si risponde ragionando, ma guardando i flussi.
+ *
+ * A schermo si dice «collegamento», non «arco»: la parola del grafo resta nel
+ * codice. Il numero dominante — i flussi distinti — non compare mai senza la
+ * sua glossa, e la diagnosi che ne deriva porta accanto la soglia che la
+ * produce, altrimenti «layer parziale» è solo un'etichetta.
  *
  * SVG puro e pointer events, nessuna libreria di grafi.
  */
 
-import { useState } from 'react';
-import { archiAggregati, diagnosiPosizione, flussiDistinti } from '@/lib/calc';
+import { useState, type ReactNode } from 'react';
+import { archiAggregati, diagnosiPosizione, flussiDistinti, type DiagnosiPosizione } from '@/lib/calc';
+import { BUCKET_GLOSSA, FASI, MODULI, TERMINI } from '@/lib/glossario';
 import type { Attore, Sessione } from '@/lib/types';
-import { CompitoMano, Intestazione, StatoCommitMano, Vuoto } from '../comune';
+import { CompitoMano, StatoCommitMano, Vuoto } from '../comune';
+import { TestataModulo } from '@/components/TestataModulo';
 import { CommitBar } from '@/components/CommitBar';
 import { LockButton } from '@/components/LockButton';
 import { useRevealPartito } from '@/components/RevealStage';
@@ -24,6 +31,41 @@ const RAGGIO = 30;
 function posizione(a: Attore) {
   return { cx: a.x * LATO, cy: a.y * LATO };
 }
+
+/** Riga di istruzione: cosa si deve fare adesso, senza incoraggiamenti. */
+function Istruzione({ children }: { children: ReactNode }) {
+  return (
+    <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+      {children}
+    </p>
+  );
+}
+
+/**
+ * Le tre diagnosi con la soglia che le produce e cosa vogliono dire.
+ * Le soglie sono quelle di diagnosiPosizione(), riportate qui solo per
+ * leggerle: la classificazione resta in lib/calc.
+ */
+const DIAGNOSI_GLOSSA: Record<DiagnosiPosizione, { soglia: string; aiuto: string }> = {
+  'Intermediario sostituibile': {
+    soglia: '0–1',
+    aiuto: 'Chi sta ai due capi può parlarsi direttamente. Togliere WDA di mezzo non rompe niente.',
+  },
+  'Layer parziale': {
+    soglia: '2–3',
+    aiuto: 'Presidiamo qualche collegamento, non l’ecosistema. Sostituibili, ma con fatica.',
+  },
+  Infrastruttura: {
+    soglia: '4+',
+    aiuto: 'L’ecosistema passa da qui: senza WDA i collegamenti vanno ricostruiti uno per uno.',
+  },
+};
+
+const SCALA_DIAGNOSI: DiagnosiPosizione[] = [
+  'Intermediario sostituibile',
+  'Layer parziale',
+  'Infrastruttura',
+];
 
 export function M3Tavolo({ sessione }: { sessione: Sessione }) {
   const ctx = useStore();
@@ -41,19 +83,24 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
   const flussi = soloIo ? stato.flussi.filter((f) => f.partecipanteId === stato.io) : stato.flussi;
   const archi = rivelato && partito ? archiAggregati(flussi) : [];
   const distinti = flussiDistinti(stato.flussi);
+  const diagnosi = diagnosiPosizione(distinti);
 
   return (
     <div className="flex flex-col gap-4">
-      <Intestazione
+      <TestataModulo
         modulo="M3"
-        titolo={servizio?.nome ?? 'La mappa dei flussi'}
-        sottotitolo="Non cosa consegna: cosa collega"
+        soggetto={servizio?.nome}
         destra={
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-col items-end gap-1 text-right" style={{ maxWidth: '22rem' }}>
             <span className="etichetta">flussi distinti su cui siede WDA</span>
             <span className="mono text-[36px] leading-none">{distinti}</span>
+            {/* Il numero grande non resta mai da solo: la definizione arriva
+                dal glossario, la diagnosi dice come si legge. */}
+            <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+              {TERMINI['flussi distinti']}
+            </span>
             <span className="text-[13px]" style={{ color: coloreDiagnosi(distinti) }}>
-              {diagnosiPosizione(distinti)}
+              {diagnosi}
             </span>
           </div>
         }
@@ -61,25 +108,31 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
 
       {!servizio && (
         <div className="pannello p-4 flex flex-col gap-2">
-          <span className="etichetta">servizi in nucleo o porta</span>
+          <span className="etichetta">
+            servizi nel {BUCKET_GLOSSA.NUCLEO.etichetta.toLowerCase()} ({BUCKET_GLOSSA.NUCLEO.standard}) o{' '}
+            {BUCKET_GLOSSA.PORTA.etichetta.toLowerCase()} ({BUCKET_GLOSSA.PORTA.standard})
+          </span>
           {candidati.length === 0 ? (
             <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-              Nessun servizio classificato: si passa da M1.
+              Nessun servizio classificato: i bucket si assegnano in M1, {MODULI.M1.nome.toLowerCase()}.
             </span>
           ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {candidati.map((s) => (
-                <button
-                  key={s.id}
-                  className="bottone p-3 text-left text-[13px]"
-                  onClick={() =>
-                    invia('session.create', { modulo: 'M3', titolo: s.nome, soggettoId: s.id, durataS: 240 })
-                  }
-                >
-                  {s.nome}
-                </button>
-              ))}
-            </div>
+            <>
+              <Istruzione>Apri il round sul servizio da mappare. Si lavora su un servizio per volta.</Istruzione>
+              <div className="grid grid-cols-3 gap-2">
+                {candidati.map((s) => (
+                  <button
+                    key={s.id}
+                    className="bottone p-3 text-left text-[13px]"
+                    onClick={() =>
+                      invia('session.create', { modulo: 'M3', titolo: s.nome, soggettoId: s.id, durataS: 240 })
+                    }
+                  >
+                    {s.nome}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -162,13 +215,75 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
               );
             })}
           </svg>
+          <p className="m-0 px-2 pt-2 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+            Trascina gli attori per disporli. Ogni linea è un collegamento: più è spessa, più persone lo hanno
+            tracciato.
+          </p>
         </div>
 
         <div className="flex flex-col gap-4">
-          {sessione.stato === 'COMMIT' && <CommitBar stato={statoCommit} presenti={presenti} nome={nome} />}
+          {sessione.stato === 'SETUP' && servizio && (
+            <Istruzione>
+              Disponete gli attori sulla mappa trascinandoli, poi aprite la {FASI.COMMIT.nome.toLowerCase()}: da lì
+              ognuno traccia i collegamenti dal proprio telefono.
+            </Istruzione>
+          )}
+
+          {sessione.stato === 'COMMIT' && (
+            <>
+              <Istruzione>
+                {FASI.COMMIT.nome}: ognuno segna sul telefono quali due attori questo servizio mette in contatto. Non
+                cosa consegna: cosa collega. Le risposte restano invisibili finché il round non passa al{' '}
+                {FASI.REVEAL.nome.toLowerCase()}.
+              </Istruzione>
+              <CommitBar stato={statoCommit} presenti={presenti} nome={nome} />
+            </>
+          )}
+
+          <div className="pannello p-4 flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <span className="etichetta">come si legge il numero</span>
+              <Istruzione>
+                La diagnosi dipende da quanti collegamenti distinti passano da noi. La riga in evidenza è quella in cui
+                cade il numero adesso.
+              </Istruzione>
+            </div>
+            <div className="flex flex-col gap-2">
+              {SCALA_DIAGNOSI.map((d) => {
+                const attiva = d === diagnosi;
+                return (
+                  <div key={d} className="flex items-baseline gap-3">
+                    <span
+                      className="mono text-[13px] w-8 shrink-0 text-right"
+                      style={{ color: attiva ? coloreDiagnosi(distinti) : 'var(--ink-faint)' }}
+                    >
+                      {DIAGNOSI_GLOSSA[d].soglia}
+                    </span>
+                    <span className="flex flex-col leading-snug">
+                      <span
+                        className="text-[15px]"
+                        style={{ color: attiva ? coloreDiagnosi(distinti) : 'var(--ink-dim)' }}
+                      >
+                        {d}
+                      </span>
+                      <span className="text-[13px]" style={{ color: 'var(--ink-faint)' }}>
+                        {DIAGNOSI_GLOSSA[d].aiuto}
+                      </span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {rivelato && (
             <div className="pannello p-4 flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="etichetta">collegamenti tracciati</span>
+                <Istruzione>
+                  Una riga per collegamento: il numero dice quante persone lo hanno tracciato.
+                </Istruzione>
+              </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="etichetta">vista</span>
                 <div className="flex gap-2">
@@ -183,7 +298,7 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
               <div className="flex flex-col gap-1">
                 {archi.length === 0 && (
                   <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-                    Nessun arco tracciato.
+                    Nessun collegamento tracciato.
                   </span>
                 )}
                 {[...archi]
@@ -204,9 +319,13 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
           )}
 
           {servizio?.nessunFlusso && (
-            <div className="pannello p-4" style={{ borderColor: 'var(--erosion)' }}>
-              <span className="text-[13px]" style={{ color: 'var(--erosion)' }}>
-                {servizio.nome}: nessun arco — consulenza tradizionale in erosione
+            <div className="pannello p-4 flex flex-col gap-1" style={{ borderColor: 'var(--erosion)' }}>
+              <span className="text-[15px]" style={{ color: 'var(--erosion)' }}>
+                {servizio.nome}: nessun collegamento
+              </span>
+              <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                Il servizio consegna un output e basta: non tiene insieme nessuna relazione fra due attori. È
+                consulenza tradizionale, la parte del mercato che l’AI sta erodendo.
               </span>
             </div>
           )}
@@ -252,7 +371,10 @@ export function M3Mano({ sessione }: { sessione: Sessione }) {
 
   if (sessione.stato !== 'COMMIT') {
     return (
-      <CompitoMano titolo={servizio.nome} sottotitolo="I tuoi archi, in sola lettura">
+      <CompitoMano
+        titolo={servizio.nome}
+        sottotitolo={`${MODULI.M3.breve} — i tuoi collegamenti, in sola lettura`}
+      >
         <div className="flex flex-col gap-2">
           {archi.length === 0 ? (
             <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
@@ -261,7 +383,7 @@ export function M3Mano({ sessione }: { sessione: Sessione }) {
           ) : (
             archi.map((a, i) => (
               <div key={i} className="text-[15px]">
-                {nomeAttore(a.da)} → {nomeAttore(a.a)}
+                {nomeAttore(a.da)} ↔ {nomeAttore(a.a)}
               </div>
             ))
           )}
@@ -295,7 +417,11 @@ export function M3Mano({ sessione }: { sessione: Sessione }) {
   return (
     <CompitoMano
       titolo={servizio.nome}
-      sottotitolo={da ? `Da ${nomeAttore(da)} — tocca l'arrivo` : 'Tocca due attori: che cosa collega questo servizio?'}
+      sottotitolo={
+        da
+          ? `Da ${nomeAttore(da)} — tocca chi sta all’altro capo`
+          : 'Tocca due attori che questo servizio mette in contatto'
+      }
       azione={
         <div className="flex flex-col gap-2">
           <StatoCommitMano confermato={mio?.confermato ?? false} />
@@ -314,6 +440,11 @@ export function M3Mano({ sessione }: { sessione: Sessione }) {
       }
     >
       <div className="flex flex-col gap-5">
+        <Istruzione>
+          Segna quali attori questo servizio mette in contatto fra loro: non cosa consegna, cosa collega. Tocca prima
+          uno, poi l’altro. Se non collega nessuno, conferma senza tracciare nulla.
+        </Istruzione>
+
         <div className="flex flex-col gap-2">
           <span className="etichetta">attori</span>
           <div className="grid grid-cols-2 gap-2">
@@ -337,7 +468,7 @@ export function M3Mano({ sessione }: { sessione: Sessione }) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="etichetta">i tuoi archi</span>
+          <span className="etichetta">i tuoi collegamenti</span>
           {archi.length === 0 && (
             <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
               Nessuno. Un servizio può non collegare nulla.
@@ -346,12 +477,12 @@ export function M3Mano({ sessione }: { sessione: Sessione }) {
           {archi.map((a, i) => (
             <div key={i} className="flex items-center justify-between gap-3 rialzato pl-3 pr-1">
               <span className="text-[15px]">
-                {nomeAttore(a.da)} → {nomeAttore(a.a)}
+                {nomeAttore(a.da)} ↔ {nomeAttore(a.a)}
               </span>
               <button
                 className="bottone text-[15px] shrink-0"
                 style={{ minHeight: 48, minWidth: 48 }}
-                aria-label={`Rimuovi ${nomeAttore(a.da)} → ${nomeAttore(a.a)}`}
+                aria-label={`Rimuovi il collegamento ${nomeAttore(a.da)} ↔ ${nomeAttore(a.a)}`}
                 onClick={() => salva((a) => a.filter((_, j) => j !== i))}
               >
                 ×

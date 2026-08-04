@@ -16,6 +16,7 @@ import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { Entra } from '@/components/Entra';
 import { FasciaFase, nomeFase } from '@/components/FasciaFase';
 import { FacilitatorPanel } from '@/components/FacilitatorPanel';
+import { IndiceProgramma } from '@/components/IndiceProgramma';
 import { MappaCappelli } from '@/components/HatBadge';
 import { IndicatorStrip } from '@/components/IndicatorStrip';
 import { BannerRiapertura } from '@/components/LockButton';
@@ -159,6 +160,13 @@ function Tavolo() {
             </button>
           </div>
         </header>
+
+        {/* Dove siamo nell'arco delle nove tappe. Sta sopra la fascia di fase
+            perché risponde a una domanda che viene prima: non "cosa sto
+            facendo adesso" ma "a che punto siamo". */}
+        <div className="px-5 pt-3 shrink-0">
+          <IndiceProgramma sessioni={s?.sessioni ?? []} moduloCorrente={sessione?.modulo ?? null} />
+        </div>
 
         <div className="px-5 py-3 shrink-0 flex gap-3 items-stretch flex-wrap">
           <div className="flex-1 min-w-[420px]">

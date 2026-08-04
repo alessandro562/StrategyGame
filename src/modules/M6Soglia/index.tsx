@@ -1,22 +1,38 @@
 'use client';
 
 /**
- * M6 — La soglia di sostenibilità.
+ * M6 — Revenue floor e runway.
  *
  * L'80% non è un tetto da rispettare, è un pavimento da difendere.
  * Unico modulo con reveal anonimo per default: una soglia di rischio personale
  * è più onesta se non deve essere difesa. L'anonimato è garantito dal server
  * (guards.ts), non dall'interfaccia.
+ *
+ * La distanza fra la soglia più prudente e la più aggressiva si chiamava
+ * «forbice»: a schermo adesso è lo spread, che è il termine che chi legge un
+ * bilancio riconosce. Il nome nel codice e nel modello dati resta forbice —
+ * cambia solo ciò che si legge.
  */
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { forbice, mescolaConSeme } from '@/lib/calc';
+import { TERMINI } from '@/lib/glossario';
 import type { Sessione } from '@/lib/types';
-import { CompitoMano, Intestazione, Premessa, StatoCommitMano } from '../comune';
+import { CompitoMano, Premessa, StatoCommitMano } from '../comune';
 import { CommitBar } from '@/components/CommitBar';
 import { LockButton } from '@/components/LockButton';
+import { TestataModulo } from '@/components/TestataModulo';
 import { useRevealPartito } from '@/components/RevealStage';
 import { useStore } from '@/net/useStore';
+
+/** Una riga asciutta che dice cosa si fa adesso, senza incoraggiamenti. */
+function Istruzione({ children }: { children: ReactNode }) {
+  return (
+    <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+      {children}
+    </p>
+  );
+}
 
 /** Tacche dell'asse 0-100. */
 const TACCHE = [0, 25, 50, 75, 100];
@@ -41,21 +57,38 @@ export function M6Tavolo({ sessione }: { sessione: Sessione }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Intestazione modulo="M6" titolo="La soglia di sostenibilità" sottotitolo="Reveal anonimo" />
+      <TestataModulo
+        modulo="M6"
+        destra={
+          <div className="flex flex-col items-end gap-1 text-right shrink-0" style={{ maxWidth: '20rem' }}>
+            <span className="etichetta">risposte anonime</span>
+            <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+              Le soglie compaiono come punti sull’asse, senza nome, anche dopo il confronto.
+            </span>
+          </div>
+        }
+      />
 
       <Premessa>
-        L’80% non è un tetto da rispettare, è un pavimento da difendere. All’inizio può essere 90% o più. La domanda
-        non è come dividere la torta, ma qual è il minimo di ricavi da servizi che tiene in vita il team mentre Forge
-        matura.
+        L’80% non è un tetto da rispettare, è un pavimento da difendere: all’inizio può essere 90% o più. La domanda
+        non è come dividere la torta, ma sotto quale quota di ricavi da servizi il team smette di essere al sicuro.
       </Premessa>
 
-      {sessione.stato === 'COMMIT' && <CommitBar stato={statoCommit} presenti={presenti} nome={nome} />}
+      {sessione.stato === 'COMMIT' && (
+        <>
+          <Istruzione>
+            Ognuno scrive dal telefono la propria soglia, i mesi di autonomia e cosa gli farebbe suonare l’allarme.
+            Nessuno vede le risposte degli altri finché il round non passa al confronto.
+          </Istruzione>
+          <CommitBar stato={statoCommit} presenti={presenti} nome={nome} />
+        </>
+      )}
 
       {rivelato && (
         <>
-          {/* La forbice è la cosa più grande a schermo dopo il reveal. */}
+          {/* Lo spread è la cosa più grande a schermo dopo il reveal. */}
           <div className="pannello p-6 flex flex-col items-center gap-2">
-            <span className="etichetta">forbice</span>
+            <span className="etichetta">spread</span>
             <div
               className="mono leading-none"
               style={{ fontSize: 'clamp(72px, 13vw, 168px)', color: 'var(--tension)', letterSpacing: '-0.04em' }}
@@ -66,11 +99,22 @@ export function M6Tavolo({ sessione }: { sessione: Sessione }) {
               punti — da <span className="mono" style={{ color: 'var(--ink)' }}>{f.min ?? '—'}</span>% a{' '}
               <span className="mono" style={{ color: 'var(--ink)' }}>{f.max ?? '—'}</span>%
             </div>
+            {/* Il numero dominante non resta mai senza la sua definizione:
+                la glossa arriva dal glossario, non da qui. */}
+            <p className="m-0 text-[13px] text-center max-w-[34rem]" style={{ color: 'var(--ink-dim)' }}>
+              {TERMINI['spread']}
+            </p>
           </div>
 
           {/* Le soglie come punti su un asse 0-100%, senza nomi. */}
           <div className="pannello p-5 flex flex-col gap-4">
-            <span className="etichetta">soglie individuali</span>
+            <div className="flex flex-col gap-1">
+              <span className="etichetta">soglie individuali</span>
+              <Istruzione>
+                Ogni punto è la soglia di una persona, sull’asse della quota di ricavi da servizi da 0 a 100%. I punti
+                non sono attribuiti.
+              </Istruzione>
+            </div>
 
             <div
               className="relative"
@@ -136,7 +180,12 @@ export function M6Tavolo({ sessione }: { sessione: Sessione }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="pannello p-4 flex flex-col gap-3">
-              <span className="etichetta">trigger di allarme — mescolati, non attribuiti</span>
+              <div className="flex flex-col gap-1">
+                <span className="etichetta">trigger di allarme — mescolati, non attribuiti</span>
+                <Istruzione>
+                  Cosa deve succedere perché chi l’ha scritto dica che stiamo sbagliando strada.
+                </Istruzione>
+              </div>
               {conTrigger.length === 0 ? (
                 <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
                   Nessun trigger scritto.
@@ -161,7 +210,13 @@ export function M6Tavolo({ sessione }: { sessione: Sessione }) {
             </div>
 
             <div className="pannello p-4 flex flex-col gap-3">
-              <span className="etichetta">soglia condivisa da negoziare</span>
+              <div className="flex flex-col gap-1">
+                <span className="etichetta">soglia condivisa da negoziare</span>
+                <Istruzione>
+                  Trascina fino alla quota su cui il gruppo si ferma, poi blocca la decisione. È il pavimento che si
+                  difende da qui in avanti.
+                </Istruzione>
+              </div>
 
               <div className="flex items-center gap-3">
                 <input
@@ -184,7 +239,7 @@ export function M6Tavolo({ sessione }: { sessione: Sessione }) {
               </div>
 
               <div className="flex items-baseline justify-between gap-3">
-                <span className="etichetta">forbice originale registrata</span>
+                <span className="etichetta">spread registrato all’apertura</span>
                 <span className="text-[13px] shrink-0" style={{ color: 'var(--ink-dim)' }}>
                   <span className="mono" style={{ color: 'var(--ink)' }}>
                     {stato.workshop.forbiceOriginale ?? f.ampiezza}
@@ -192,6 +247,7 @@ export function M6Tavolo({ sessione }: { sessione: Sessione }) {
                   punti
                 </span>
               </div>
+              <Istruzione>Resta a verbale: dice quanto era distante il gruppo prima di negoziare.</Istruzione>
 
               {sessione.stato !== 'LOCKED' && (
                 <LockButton
@@ -228,9 +284,11 @@ function Traiettoria() {
 
   return (
     <div className="pannello p-4 flex flex-col gap-3">
-      <div className="flex items-baseline justify-between gap-4">
-        <span className="etichetta">traiettoria verso gennaio 2027 — quota servizi per trimestre</span>
-        <span className="etichetta shrink-0">trascina le colonne</span>
+      <div className="flex flex-col gap-1">
+        <span className="etichetta">traiettoria verso gennaio 2027 — quota di ricavi da servizi per trimestre</span>
+        <Istruzione>
+          Trascina ogni colonna fino alla quota di ricavi da servizi che il gruppo prevede per quel trimestre.
+        </Istruzione>
       </div>
 
       <div
@@ -275,6 +333,13 @@ function Traiettoria() {
           </div>
         ))}
       </div>
+
+      {/* R, G e B sono lettere mute per chi non ha seguito il setup: la riga
+          le rilega alle tre risorse scarse fissate in M0. */}
+      <Istruzione>
+        R, G e B sono le tre risorse scarse fissate nel setup — relazioni di fiducia, decisioni con la nostra firma,
+        trattative aperte. I numeri sono quante ne consuma il trimestre.
+      </Istruzione>
     </div>
   );
 }
@@ -291,15 +356,24 @@ export function M6Mano({ sessione }: { sessione: Sessione }) {
 
   if (sessione.stato !== 'COMMIT') {
     return (
-      <CompitoMano titolo="La tua soglia" sottotitolo="In sola lettura — il reveal è anonimo">
+      <CompitoMano
+        titolo="La tua soglia"
+        sottotitolo="Sola lettura. Sul tavolo compare come punto, senza il tuo nome."
+      >
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-1">
-            <span className="etichetta">soglia di sicurezza</span>
+            <span className="etichetta">soglia di sicurezza — revenue floor</span>
             <span className="mono text-[28px] leading-none">{p?.sogliaPct ?? '—'}%</span>
+            <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+              Sotto questa quota di ricavi da servizi non ti senti al sicuro.
+            </span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="etichetta">mesi di autonomia</span>
+            <span className="etichetta">mesi di autonomia — runway</span>
             <span className="mono text-[28px] leading-none">{p?.mesiAutonomia ?? '—'}</span>
+            <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+              Per quanti mesi il team regge con le risorse di oggi.
+            </span>
           </div>
           {p?.trigger && (
             <div className="flex flex-col gap-1">
@@ -321,7 +395,7 @@ export function M6Mano({ sessione }: { sessione: Sessione }) {
   return (
     <CompitoMano
       titolo="Qual è il minimo che ti fa stare tranquillo?"
-      sottotitolo="Nessuno vedrà che è la tua"
+      sottotitolo="Rispondi per te. Sul tavolo la risposta compare senza il tuo nome, anche dopo il confronto."
       azione={
         <div className="flex flex-col gap-2">
           <StatoCommitMano confermato={mio?.confermato ?? false} />
@@ -341,7 +415,10 @@ export function M6Mano({ sessione }: { sessione: Sessione }) {
     >
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
-          <span className="etichetta">soglia di sicurezza — quota ricavi da servizi</span>
+          <span className="etichetta">soglia di sicurezza — revenue floor</span>
+          <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+            Sotto questa quota di ricavi da servizi non ti senti al sicuro.
+          </span>
           <div className="flex items-center gap-3">
             <input
               type="range"
@@ -358,7 +435,10 @@ export function M6Mano({ sessione }: { sessione: Sessione }) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="etichetta">mesi di autonomia</span>
+          <span className="etichetta">mesi di autonomia — runway</span>
+          <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+            Per quanti mesi il team regge con le risorse di oggi.
+          </span>
           <div className="flex items-center gap-3">
             <input
               type="range"
@@ -376,6 +456,9 @@ export function M6Mano({ sessione }: { sessione: Sessione }) {
 
         <div className="flex flex-col gap-2">
           <span className="etichetta">trigger di allarme</span>
+          <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+            Il segnale che ti farebbe dire che stiamo sbagliando strada. Sul tavolo compare mescolato agli altri.
+          </span>
           <textarea
             className="w-full text-[15px]"
             rows={4}
