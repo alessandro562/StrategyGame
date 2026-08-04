@@ -139,6 +139,64 @@ describe('cancellazione', () => {
   });
 });
 
+describe('spostare le carte', () => {
+  it('chiunque sposta qualsiasi carta: riclassificare è l’esercizio', () => {
+    const s = statoIniziale();
+    s.workshop.facilitatoreId = 'p1';
+    const carta = s.quadro.find((x) => x.riga === 'SERVIZI' && x.colonna === 'OGGI')!;
+    esegui(s, 'p4', {
+      type: 'quadro.sposta',
+      payload: { id: carta.id, riga: 'PRODOTTI', colonna: 'FUTURO', orizzonte: 'LUMINOSO' },
+    });
+    const dopo = s.quadro.find((x) => x.id === carta.id)!;
+    expect(dopo.riga).toBe('PRODOTTI');
+    expect(dopo.colonna).toBe('FUTURO');
+    expect(dopo.orizzonte).toBe('LUMINOSO');
+    // Il testo è di chi l'ha scritto e non lo tocca nessuno spostandola.
+    expect(dopo.testo).toBe(carta.testo);
+    expect(dopo.autoreId).toBe(carta.autoreId);
+  });
+
+  it("uscendo dal futuro l'orizzonte sparisce invece di restare appiccicato", () => {
+    const s = statoIniziale();
+    esegui(s, 'p2', {
+      type: 'quadro.aggiungi',
+      payload: { riga: 'MERCATO', colonna: 'FUTURO', testo: 'Spagna', orizzonte: 'LONTANO' },
+    });
+    const id = s.quadro.find((x) => x.testo === 'Spagna')!.id;
+    esegui(s, 'p2', { type: 'quadro.sposta', payload: { id, riga: 'MERCATO', colonna: 'OGGI' } });
+    expect(s.quadro.find((x) => x.id === id)?.orizzonte).toBeUndefined();
+  });
+
+  it('una carta inesistente è un 404', () => {
+    const s = statoIniziale();
+    expect(() =>
+      verificaAzione(s, 'p1', {
+        type: 'quadro.sposta',
+        payload: { id: 'q-mai', riga: 'SERVIZI', colonna: 'OGGI' },
+      }),
+    ).toThrow(ErroreGuardia);
+  });
+});
+
+describe('i competitor mappati', () => {
+  it('i quattro analizzati stanno ognuno sulla riga su cui preme, non tutti in «servizi»', () => {
+    const conAnalisi = quadroIniziale().filter((v) => v.nota);
+    expect(conAnalisi.length).toBeGreaterThanOrEqual(7);
+    // Tutti in colonna competitor, ma sparsi su più righe: è il punto della
+    // mappatura. Se finissero tutti su una riga sola, la mappa non direbbe
+    // niente che non dicesse già un elenco.
+    expect(conAnalisi.every((v) => v.colonna === 'COMPETITOR')).toBe(true);
+    expect(new Set(conAnalisi.map((v) => v.riga)).size).toBeGreaterThanOrEqual(4);
+  });
+
+  it('ogni analisi porta la fonte, così è verificabile invece che da credere', () => {
+    for (const v of quadroIniziale().filter((x) => x.nota)) {
+      expect(v.url).toMatch(/^https:\/\//);
+    }
+  });
+});
+
 describe('stanze aperte prima che MQ esistesse', () => {
   it('lo stato senza quadro viene riempito in lettura, non esplode alla prima scrittura', async () => {
     // Si simula esattamente ciò che c'è su Redis dopo un deploy: lo stato

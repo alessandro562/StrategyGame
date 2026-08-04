@@ -21,11 +21,19 @@ export function TestataModulo({
   modulo,
   soggetto,
   destra,
+  senzaComeFunziona,
 }: {
   modulo: Modulo;
   /** Su cosa si sta lavorando adesso, es. il nome del servizio in esame. */
   soggetto?: string;
   destra?: React.ReactNode;
+  /**
+   * Per i moduli che spiegano già altrove come si fa — MQ ha una riga di
+   * comandi sotto la testata, e «trascina una carta» detto due volte a
+   * quattro centimetri di distanza costa una riga della mappa senza aggiungere
+   * niente.
+   */
+  senzaComeFunziona?: boolean;
 }) {
   const m = MODULI[modulo];
 
@@ -52,7 +60,7 @@ export function TestataModulo({
 
       <dl className="m-0 grid gap-x-6 gap-y-2" style={{ gridTemplateColumns: 'auto 1fr' }}>
         <Voce etichetta="a cosa serve" testo={m.obiettivo} />
-        <Voce etichetta="cosa si fa" testo={m.comeFunziona} />
+        {!senzaComeFunziona && <Voce etichetta="cosa si fa" testo={m.comeFunziona} />}
         <Voce etichetta="cosa ne esce" testo={m.output} />
       </dl>
     </div>

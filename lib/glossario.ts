@@ -53,7 +53,7 @@ export const MODULI: Record<Modulo, VoceModulo> = {
     obiettivo:
       'Mettere sotto gli occhi di tutti cosa facciamo oggi, cosa fanno gli altri e dove vogliamo arrivare.',
     comeFunziona:
-      'Una tabella condivisa: sei righe — servizi, prodotti, mercato, clienti, partner, revenue model — e tre colonne. Chiunque aggiunge una voce dal proprio telefono, e compare qui.',
+      'Una mappa a carte: sei righe — servizi, prodotti, mercato, clienti, partner, revenue model — e tre colonne. Le carte si trascinano da una casella all’altra sullo schermo grande, e chiunque ne aggiunge dal proprio telefono.',
     output: 'La fotografia condivisa da cui parte tutto il resto del ritiro.',
     durataMin: 30,
   },
