@@ -1,5 +1,20 @@
 import type { Metadata, Viewport } from 'next';
+import { GeistMono } from 'geist/font/mono';
+import { GeistSans } from 'geist/font/sans';
 import './globals.css';
+
+/**
+ * Geist e Geist Mono, non lo stack di sistema.
+ *
+ * La specifica vieta Inter e Roboto e chiede un grottesco svizzero con un mono
+ * a cifre tabulari: Geist è esattamente quello, disegnato per interfacce dense
+ * e strumentali. Il mono ha le cifre della stessa larghezza, che è la ragione
+ * per cui i numeri non ballano mentre si aggiornano in tempo reale.
+ *
+ * Arriva dal pacchetto npm, che porta i file con sé, e non da next/font/google
+ * che li scaricherebbe durante il build: a due giorni dal ritiro un build che
+ * dipende dalla rete è un rischio che non vale la pena correre.
+ */
 
 export const metadata: Metadata = {
   title: 'WDA Strategy Room',
@@ -23,7 +38,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it">
+    <html lang="it" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body>{children}</body>
     </html>
   );

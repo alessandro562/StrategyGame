@@ -68,10 +68,39 @@
   --radius: 2px;
   --grid: 4px;
 
-  --font-ui: 'Söhne', 'Basis Grotesque', 'Suisse Int\'l', system-ui, -apple-system,
+  /* Geist arriva dal pacchetto npm via app/layout.tsx, che espone le due
+     variabili --font-geist-sans e --font-geist-mono. Lo stack di sistema resta
+     come rete di sicurezza: se il font non carica l'interfaccia non si scompone.
+     Mai Inter, mai Roboto (§8.3). */
+  --font-ui: var(--font-geist-sans), 'Söhne', 'Basis Grotesque', system-ui, -apple-system,
     'Segoe UI', 'Helvetica Neue', sans-serif;
-  --font-mono: 'Berkeley Mono', 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo',
-    'Consolas', monospace;
+  --font-mono: var(--font-geist-mono), 'Berkeley Mono', 'JetBrains Mono', ui-monospace,
+    'SF Mono', 'Menlo', 'Consolas', monospace;
+
+  /* SCALA TIPOGRAFICA. Cinque gradini, non uno di più: la varietà di corpi
+     nella stessa schermata è ciò che fa sembrare un'interfaccia disordinata
+     anche quando ogni singola scelta è ragionevole.
+       11  etichette in maiuscoletto
+       13  righe dense, tabelle, controlli
+       15  contenuto corrente
+       17  titolo di blocco
+       22  titolo di modulo
+     I numeri dominanti (timer, residuo, spread) stanno fuori scala per
+     mestiere: sono l'artefatto, non testo. */
+  --t-etichetta: 11px;
+  --t-denso: 13px;
+  --t-corpo: 15px;
+  --t-blocco: 17px;
+  --t-titolo: 22px;
+
+  /* RITMO VERTICALE, multipli di --grid. Dà lo stesso stacco a cose dello
+     stesso livello, che è metà dell'ordine percepito. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
 }
 
 * {
@@ -172,6 +201,23 @@ input:focus,
 textarea:focus,
 select:focus {
   border-color: var(--wda-bright);
+}
+
+/**
+ * ANELLO DI FOCUS, uno per tutta l'interfaccia.
+ *
+ * Gli input avevano `outline: none` senza nulla al suo posto: chi naviga da
+ * tastiera — e chiunque usi Tab per passare fra i campi della schermata
+ * d'accesso — non vedeva dove si trovava. Il cambio di colore del bordo da
+ * solo non basta, perché su un bordo da un pixel è quasi impercettibile.
+ *
+ * `:focus-visible` e non `:focus`: l'anello compare per la tastiera e non
+ * dopo un clic del mouse, che è il comportamento che ci si aspetta oggi.
+ */
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--wda-bright);
+  outline-offset: 2px;
+  border-radius: var(--radius);
 }
 
 ::selection {
