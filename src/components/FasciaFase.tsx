@@ -20,38 +20,51 @@ interface Testo {
   tavolo: string;
   mano: string;
   colore: string;
+  /**
+   * Come si lavora in questa fase. È la distinzione che si perdeva di più:
+   * dal nome della fase non si capiva se fosse un momento di gruppo o
+   * individuale, e "SETUP" sembrava un'attesa del proprio turno invece che
+   * una discussione a voce. In COMMIT nessuno aspetta nessuno: i sei
+   * rispondono in parallelo.
+   */
+  modo: 'insieme' | 'ognuno';
 }
 
 const TESTI: Record<StatoSessione, Testo> = {
   SETUP: {
     fase: 'preparazione',
-    tavolo: 'Si prepara il round. Il contenuto è in sola lettura.',
-    mano: 'Non tocca ancora a te. Guarda lo schermo grande.',
+    tavolo: 'Tutti insieme, a voce. Si prepara il round guardando questo schermo.',
+    mano: 'Si lavora tutti insieme sullo schermo grande. Qui non serve fare nulla.',
     colore: 'var(--ink-faint)',
+    modo: 'insieme',
   },
   COMMIT: {
     fase: 'commit cieco',
-    tavolo: 'Ognuno risponde in privato. Nessuno vede le risposte degli altri, nemmeno questo schermo.',
-    mano: 'Rispondi. Nessuno vede la tua risposta finché non si rivela.',
+    tavolo: 'Ognuno per sé, tutti nello stesso momento. Nessuno vede le risposte degli altri, nemmeno questo schermo.',
+    mano: 'Tocca a te, adesso. Rispondi quando vuoi: nessuno aspetta il tuo turno e nessuno vede finché non si rivela.',
     colore: 'var(--live)',
+    modo: 'ognuno',
   },
   REVEAL: {
     fase: 'reveal',
-    tavolo: 'Tutte le posizioni insieme.',
-    mano: 'Le risposte sono sullo schermo grande. La tua non si può più cambiare.',
+    tavolo: 'Tutte le posizioni insieme, nello stesso istante.',
+    mano: 'Si guarda insieme sullo schermo grande. La tua risposta non si può più cambiare.',
     colore: 'var(--wda-bright)',
+    modo: 'insieme',
   },
   DISCUSSIONE: {
     fase: 'discussione',
-    tavolo: 'Si negozia. Le divergenze restano registrate.',
-    mano: 'Hai cambiato idea? Si annota, non si riscrive il commit.',
+    tavolo: 'Tutti insieme. Si negozia, e le divergenze restano registrate.',
+    mano: 'Si discute insieme. Hai cambiato idea? Si annota, non si riscrive il commit.',
     colore: 'var(--tension)',
+    modo: 'insieme',
   },
   LOCKED: {
     fase: 'bloccato',
     tavolo: 'Decisione registrata, dissensi compresi.',
     mano: 'Deciso. Si passa oltre.',
     colore: 'var(--locked)',
+    modo: 'insieme',
   },
 };
 
@@ -85,11 +98,33 @@ export function FasciaFase({
       <span className="mono text-[13px] shrink-0" style={{ color: t.colore, letterSpacing: '0.08em' }}>
         {sessione.modulo} · {t.fase.toUpperCase()}
       </span>
+      <EtichettaModo modo={t.modo} />
       <span className="text-[15px] flex-1 min-w-[200px]" style={{ color: 'var(--ink)' }}>
         {ruolo === 'tavolo' ? t.tavolo : t.mano}
       </span>
       {destra}
     </div>
+  );
+}
+
+/**
+ * Insieme o ognuno per sé. Sta accanto al nome della fase perché è la domanda
+ * a cui si risponde per prima entrando in stanza, prima ancora di leggere cosa
+ * c'è da fare.
+ */
+function EtichettaModo({ modo }: { modo: 'insieme' | 'ognuno' }) {
+  const insieme = modo === 'insieme';
+  return (
+    <span
+      className="mono text-[11px] shrink-0 px-2 py-1"
+      style={{
+        letterSpacing: '0.1em',
+        border: `1px solid ${insieme ? 'var(--line-strong)' : 'var(--live)'}`,
+        color: insieme ? 'var(--ink-dim)' : 'var(--live)',
+      }}
+    >
+      {insieme ? 'TUTTI INSIEME' : 'OGNUNO PER SÉ'}
+    </span>
   );
 }
 
@@ -104,9 +139,11 @@ export function FaseMano({ sessione }: { sessione: Sessione | null }) {
   }
   const t = TESTI[sessione.stato];
   return (
-    <span className="text-[13px] flex items-center gap-2">
-      <span className="inline-block w-2 h-2 shrink-0" style={{ background: t.colore }} />
-      <span style={{ color: 'var(--ink-dim)' }}>{t.mano}</span>
-    </span>
+    <div className="flex items-start gap-2">
+      <EtichettaModo modo={t.modo} />
+      <span className="text-[13px] flex-1" style={{ color: 'var(--ink-dim)' }}>
+        {t.mano}
+      </span>
+    </div>
   );
 }

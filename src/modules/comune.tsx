@@ -126,10 +126,15 @@ export function BottoneTocco({
 
 export function AttesaMano({ sessione }: { sessione: Sessione | null }) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-2">
-      <span className="etichetta">in attesa</span>
-      <p className="m-0 text-[14px] text-center" style={{ color: 'var(--ink-dim)' }}>
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6">
+      <span className="etichetta">{sessione ? 'si lavora insieme' : 'in attesa'}</span>
+      <p className="m-0 text-[17px] text-center" style={{ color: 'var(--ink)' }}>
         {sessione ? `${sessione.modulo} — ${sessione.titolo}` : 'Nessun round aperto'}
+      </p>
+      <p className="m-0 text-[14px] text-center" style={{ color: 'var(--ink-dim)' }}>
+        {sessione
+          ? 'Questo momento si fa a voce, guardando lo schermo grande. Quando toccherà a te rispondere in privato, questa schermata cambia da sola.'
+          : 'Chi facilita non ha ancora aperto un round.'}
       </p>
     </div>
   );
