@@ -1,49 +1,50 @@
 /**
- * Sistema visivo — §8, su fondo chiaro.
+ * Sistema visivo.
  *
- * La specifica sceglieva il fondo scuro per una ragione di tono. Il fondo
- * chiaro nasce da una ragione di sala che pesa di più: su un proiettore in una
- * stanza illuminata il nero si slava e i grigi spariscono, mentre il bianco
- * regge. Resta il resto della direzione — densa, strumentale, un solo accento
- * per volta, il colore codifica stato e mai decorazione, nessuna ombra e
- * nessun gradiente. Control room stampata su carta, non pastello.
+ * La specifica chiedeva una control room: densa, strumentale, angoli a due
+ * pixel, nessuna ombra. Quella direzione è stata abbandonata su richiesta
+ * esplicita — risultava dura e respingente. Adesso l'impianto è consumer:
+ * superfici che respirano, angoli morbidi, profondità data da ombre leggere,
+ * stati raccontati da pastiglie colorate tenui invece che da solo testo
+ * colorato.
  *
- * CONTRATTO DEI TOKEN. Ogni valore qui sotto è verificato in contrasto:
- * il testo sta sopra 4.5:1 sul proprio fondo, i contorni dei controlli sopra
- * 3:1. Chi tocca un colore rifà il conto — a occhio, su fondo chiaro, si
- * sbaglia sempre per difetto.
+ * Tre cose restano dalla versione precedente, perché sono funzionali e non
+ * estetiche, e buttarle costerebbe qualcosa di reale:
+ *   1. i contrasti sono verificati, non scelti a occhio — tutto il testo sta
+ *      sopra 4.5:1 sul proprio fondo;
+ *   2. i numeri usano cifre di larghezza fissa, così non ballano mentre si
+ *      aggiornano in tempo reale;
+ *   3. il Tavolo resta leggibile proiettato in una stanza illuminata.
  *
- *   --ink / --ink-dim / --ink-faint   testo, in tre livelli di gerarchia
- *   --bg-deep / --bg-panel / --bg-raised
- *                                     su chiaro la profondità va verso il
- *                                     basso: la pagina è bianca, i pannelli
- *                                     appena grigi, il rialzato più grigio
- *   --line / --line-strong            separatore decorativo / contorno di
- *                                     controllo (input, bottoni)
- *   --wda-bright                      il blu che porta TESTO e tratti fini
- *   --wda                             il blu dei RIEMPIMENTI
- *   --ink-inverso                     il testo sopra un riempimento d'accento
+ * CONTRATTO DEI TOKEN — i nomi non cambiano mai, cambiano i valori. È ciò che
+ * ha permesso di ridisegnare tutto senza riscrivere i componenti.
  *
- * I due ruoli del blu si invertono col tema: su fondo scuro serviva una
- * versione schiarita per il testo, su fondo chiaro ne serve una scurita. Il
- * nome --wda-bright indica il ruolo («quello che porta il testo»), non la
- * luminosità.
+ *   --bg-deep      la pagina, un neutro tenue su cui le schede galleggiano
+ *   --bg-panel     la scheda, bianca
+ *   --bg-raised    superficie interna a una scheda, per raggruppare
+ *   --line         separatore tenue
+ *   --line-strong  contorno di un controllo (input, bottone)
+ *   --ink / --ink-dim / --ink-faint   testo, in tre livelli
+ *   --ink-inverso  testo sopra un riempimento pieno
+ *   --wda          blu di marchio per i riempimenti
+ *   --wda-bright   blu di marchio per il testo
+ *   --*-wash       fondo tenue di una pastiglia di stato
+ *   --ombra-1/2/3  profondità, dalla scheda a riposo al pannello sollevato
  */
 
 :root {
-  --bg-deep: #ffffff;
-  --bg-panel: #fafbfc;
-  --bg-raised: #f2f4f7;
-  --line: #e5e8ec;
-  /* 3.04:1 su bianco: è il minimo per un contorno di controllo. Più chiaro di
-     così gli input smettono di avere un bordo percepibile. */
-  --line-strong: #8b95a1;
+  /* La pagina non è bianca: è un neutro appena percettibile, così le schede
+     bianche sopra hanno qualcosa contro cui staccarsi senza bisogno di bordi
+     marcati. È la mossa che più di ogni altra toglie durezza. */
+  --bg-deep: #f5f6f8;
+  --bg-panel: #ffffff;
+  --bg-raised: #f7f8fa;
+  --line: #e9eaee;
+  --line-strong: #cfd4dc;
 
-  --ink: #14181d; /* 17.8:1 */
-  --ink-dim: #59616c; /* 6.3:1 */
-  --ink-faint: #6b7480; /* 4.7:1 */
-  /* Testo e icone sopra un riempimento pieno di --live, --wda, --erosion o
-     --tension: tutti e quattro reggono il bianco sopra i 5:1. */
+  --ink: #101828; /* 17.8:1 su scheda */
+  --ink-dim: #475467; /* 7.7:1 */
+  --ink-faint: #667085; /* 5.0:1 */
   --ink-inverso: #ffffff;
 
   /* Fattore di ingrandimento della vista di sala. Il Tavolo sta a tre metri
@@ -53,20 +54,39 @@
      proiettori. */
   --scala: 1;
 
-  /* Marchio WDA. Il blu del logo (#3d6c92) è già a 5.6:1 su bianco: resta
-     tale e quale per i riempimenti, e si scurisce per il testo. */
+  /* Marchio WDA, campionato dal logo. Il riempimento resta il blu originale,
+     il testo usa la versione scurita. */
   --wda: #3d6c92;
-  --wda-bright: #2b5175; /* 8.3:1 — testo e tratti fini */
+  --wda-bright: #2b5175; /* 8.3:1 — testo */
   --wda-deep: #1e3a52;
-  --wda-wash: rgba(61, 108, 146, 0.09);
+  --wda-wash: #eef4f9; /* pastiglia di marchio */
 
-  --live: #0e7c4f; /* 5.2:1 — attivo, commit ricevuto, residuo umano */
-  --tension: #a05a00; /* 5.3:1 — divergenza, timer in scadenza */
-  --erosion: #c0341c; /* 5.6:1 — erosione, vulnerabilità, chiuso */
-  --locked: #2b5175; /* artefatto bloccato — famiglia WDA */
+  --live: #067647; /* 5.7:1 — confermato, attivo, residuo umano */
+  --tension: #b54708; /* 5.4:1 — divergenza, tempo in scadenza */
+  --erosion: #b42318; /* 6.6:1 — erosione, vulnerabilità, dismesso */
+  --locked: #2b5175; /* deciso — famiglia WDA */
 
-  --radius: 2px;
+  /* Pastiglie di stato: un fondo tenue sotto il testo colorato. Sono ciò che
+     rende leggibile uno stato a colpo d'occhio senza gridare, e la ragione
+     per cui l'interfaccia smette di sembrare un foglio di calcolo. */
+  --live-wash: #ecfdf3;
+  --tension-wash: #fffaeb;
+  --erosion-wash: #fef3f2;
+
+  /* Angoli morbidi: era il singolo valore che più faceva sembrare il prodotto
+     un terminale. Tre gradini più la pastiglia. */
+  --radius: 12px; /* schede */
+  --radius-sm: 8px; /* controlli, campi */
+  --radius-lg: 16px; /* pannelli grandi */
+  --radius-pill: 999px; /* pastiglie ed etichette di stato */
   --grid: 4px;
+
+  /* Profondità con ombre morbide e a bassa opacità, non con i bordi. Due
+     livelli sovrapposti per ognuna: una stretta che stacca dal fondo e una
+     larga che dà la distanza. */
+  --ombra-1: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
+  --ombra-2: 0 2px 4px -2px rgba(16, 24, 40, 0.06), 0 4px 8px -2px rgba(16, 24, 40, 0.1);
+  --ombra-3: 0 8px 8px -4px rgba(16, 24, 40, 0.03), 0 20px 24px -4px rgba(16, 24, 40, 0.08);
 
   /* Geist arriva dal pacchetto npm via app/layout.tsx, che espone le due
      variabili --font-geist-sans e --font-geist-mono. Lo stack di sistema resta
@@ -105,7 +125,6 @@
 
 * {
   box-sizing: border-box;
-  border-radius: 0;
 }
 
 html,
@@ -140,7 +159,7 @@ button {
   background: none;
   border: none;
   cursor: pointer;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
 }
 
 /**
@@ -161,6 +180,9 @@ button:disabled {
    altrimenti continua a sembrare il bottone da premere. */
 .bottone-primario:disabled {
   background: var(--bg-raised);
+  border-color: var(--line);
+  color: var(--ink-faint);
+  box-shadow: none;
 }
 
 input,
@@ -169,11 +191,12 @@ select {
   font-family: inherit;
   font-size: inherit;
   color: var(--ink);
-  background: var(--bg-deep);
+  background: var(--bg-panel);
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
-  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
   outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
 /**
@@ -200,7 +223,8 @@ input[type='range']:focus-visible {
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: var(--wda-bright);
+  border-color: var(--wda);
+  box-shadow: 0 0 0 4px var(--wda-wash);
 }
 
 /**
@@ -227,22 +251,32 @@ select:focus {
 
 /* --- utilità --------------------------------------------------------- */
 
+/* La scheda: bianca, angoli morbidi, staccata dal fondo da un'ombra leggera
+   invece che da un bordo marcato. Il bordo resta, tenue, perché su schermi
+   poco contrastati l'ombra da sola sparisce. */
 .pannello {
   background: var(--bg-panel);
   border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--ombra-1);
 }
 
+/* Raggruppa contenuto dentro una scheda: nessuna ombra, altrimenti si
+   creerebbe una profondità che non esiste. */
 .rialzato {
   background: var(--bg-raised);
   border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
 }
 
+/* L'etichetta era mono maiuscoletto con crenatura larga: la cosa che più
+   faceva "terminale". Adesso è il carattere dell'interfaccia, minuscolo e in
+   semigrassetto — si legge come una didascalia, non come un tracciato. */
 .etichetta {
-  font-size: 11px;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
+  font-size: var(--t-etichetta);
+  letter-spacing: 0.01em;
   color: var(--ink-faint);
-  font-family: var(--font-mono);
+  font-weight: 500;
 }
 
 /**
@@ -254,27 +288,42 @@ select:focus {
   zoom: var(--scala);
 }
 
+/* Secondario: bianco su bianco, definito dal contorno e da un'ombra minima.
+   Si solleva appena al passaggio del mouse — il movimento è quello che fa
+   sembrare un'interfaccia viva senza aggiungere decorazione. */
 .bottone {
   border: 1px solid var(--line-strong);
-  background: var(--bg-raised);
-  padding: 7px 12px;
+  background: var(--bg-panel);
+  padding: 9px 16px;
   color: var(--ink);
-  transition: border-color 120ms linear, background 120ms linear;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--ombra-1);
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease,
+    transform 120ms ease;
 }
 
 .bottone:hover:not(:disabled) {
-  border-color: var(--wda-bright);
+  background: var(--bg-raised);
+  box-shadow: var(--ombra-2);
 }
 
+.bottone:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: var(--ombra-1);
+}
+
+/* Primario: riempimento pieno. Prima era una velatura con testo colorato, e
+   in una schermata piena di controlli non si capiva quale fosse l'azione. */
 .bottone-primario {
   border-color: var(--wda);
-  background: var(--wda-wash);
-  color: var(--wda-bright);
+  background: var(--wda);
+  color: var(--ink-inverso);
 }
 
 .bottone-primario:hover:not(:disabled) {
-  background: var(--wda);
-  color: var(--ink-inverso);
+  background: var(--wda-bright);
+  border-color: var(--wda-bright);
 }
 
 .bottone[aria-pressed='true'] {
