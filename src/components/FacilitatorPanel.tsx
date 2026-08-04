@@ -27,6 +27,9 @@ import type { Modulo, StatoSessione } from '@/lib/types';
  * smontaggio» rimasto a schermo dopo la rinomina.
  */
 const CONFIG_MODULI: { modulo: Modulo; durataS?: number; anonimo?: boolean }[] = [
+  // Senza timer: il quadro si riempie finché serve, e un conto alla rovescia
+  // sul primo esercizio della giornata mette fretta nel momento sbagliato.
+  { modulo: 'MQ' },
   { modulo: 'M0' },
   { modulo: 'M1', durataS: 240 },
   { modulo: 'M2', durataS: 180 },

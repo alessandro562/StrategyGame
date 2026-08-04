@@ -290,8 +290,8 @@ describe('#12 export con dati parziali', () => {
     const md = generaVerbale(statoIniziale(), [], 1_700_000_000_000);
     expect(md).toContain('# Ritiro WDA');
     expect(md).toContain('Nessuna decisione bloccata.');
-    expect(md).toContain('## 10. Action plan');
-    expect(md).toContain('## 12. Decisioni riaperte');
+    expect(md).toContain('## 11. Action plan');
+    expect(md).toContain('## 13. Decisioni riaperte');
   });
 
   it('il dissenso non viene cancellato dal lock', () => {

@@ -33,6 +33,7 @@ import { M6Tavolo } from '@/modules/M6Soglia';
 import { M7Tavolo } from '@/modules/M7Invarianti';
 import { M8Tavolo } from '@/modules/M8ActionPlan';
 import { M9Tavolo } from '@/modules/M9Verbale';
+import { MQTavolo } from '@/modules/MQQuadro';
 import { Vuoto } from '@/modules/comune';
 
 export default function Pagina() {
@@ -293,6 +294,8 @@ function VistaModulo() {
   if (!sessioneAttiva || !stato) return null;
 
   switch (sessioneAttiva.modulo) {
+    case 'MQ':
+      return <MQTavolo sessione={sessioneAttiva} />;
     case 'M0':
       return <M0Tavolo urlMano={urlMano} />;
     case 'M1':

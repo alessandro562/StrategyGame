@@ -20,7 +20,17 @@
  */
 
 import type { DiagnosiPosizione } from './calc';
-import type { BasePrezzo, Bucket, Destinazione, Modulo, Scenario, StatoSessione } from './types';
+import type {
+  BasePrezzo,
+  Bucket,
+  ColonnaQuadro,
+  Destinazione,
+  Modulo,
+  OrizzonteQuadro,
+  RigaQuadro,
+  Scenario,
+  StatoSessione,
+} from './types';
 
 export interface VoceModulo {
   codice: Modulo;
@@ -36,6 +46,17 @@ export interface VoceModulo {
 }
 
 export const MODULI: Record<Modulo, VoceModulo> = {
+  MQ: {
+    codice: 'MQ',
+    nome: 'Quadro d’insieme',
+    breve: 'Quadro',
+    obiettivo:
+      'Mettere sotto gli occhi di tutti cosa facciamo oggi, cosa fanno gli altri e dove vogliamo arrivare.',
+    comeFunziona:
+      'Una tabella condivisa: sei righe — servizi, prodotti, mercato, clienti, partner, revenue model — e tre colonne. Chiunque aggiunge una voce dal proprio telefono, e compare qui.',
+    output: 'La fotografia condivisa da cui parte tutto il resto del ritiro.',
+    durataMin: 30,
+  },
   M0: {
     codice: 'M0',
     nome: 'Setup della sessione',
@@ -187,6 +208,57 @@ export const VINCOLI: { chiave: ChiaveVincolo; nome: string; descrizione: string
 ];
 
 /* ------------------------------------------------------------------ */
+/* MQ — righe e colonne del quadro                                     */
+/* ------------------------------------------------------------------ */
+
+export const RIGHE_QUADRO: { chiave: RigaQuadro; etichetta: string; aiuto: string }[] = [
+  { chiave: 'SERVIZI', etichetta: 'Servizi', aiuto: 'Quello che vendiamo a ore, a progetto o a percorso.' },
+  { chiave: 'PRODOTTI', etichetta: 'Prodotti', aiuto: 'Quello che esiste anche quando non ci lavoriamo sopra.' },
+  { chiave: 'MERCATO', etichetta: 'Mercato', aiuto: 'Dove giochiamo: settori, geografie, dimensioni d’impresa.' },
+  { chiave: 'CLIENTI', etichetta: 'Clienti', aiuto: 'Chi firma l’ordine e chi usa quello che consegniamo.' },
+  { chiave: 'PARTNER', etichetta: 'Partner', aiuto: 'Chi ci porta lavoro, capacità o accesso.' },
+  { chiave: 'REVENUE', etichetta: 'Revenue model', aiuto: 'Come entrano i soldi, non quanti.' },
+];
+
+export const COLONNE_QUADRO: { chiave: ColonnaQuadro; etichetta: string; aiuto: string }[] = [
+  { chiave: 'OGGI', etichetta: 'Cosa facciamo', aiuto: 'Com’è adesso, senza abbellirlo.' },
+  { chiave: 'COMPETITOR', etichetta: 'Competitor', aiuto: 'Cosa fanno gli altri e come si posizionano.' },
+  { chiave: 'FUTURO', etichetta: 'Futuro', aiuto: 'Dove vogliamo essere. È la colonna che parte vuota.' },
+];
+
+/**
+ * I tre orizzonti dentro la colonna Futuro, dal Future Canvas.
+ * Le etichette dicono *quando*, non *quanto è ambizioso*: «un giorno» è una
+ * data vaga e si vede, mentre «visione di lungo termine» suona come una cosa
+ * seria anche quando non lo è.
+ */
+export const ORIZZONTI_QUADRO: {
+  chiave: OrizzonteQuadro;
+  etichetta: string;
+  quando: string;
+  aiuto: string;
+}[] = [
+  {
+    chiave: 'VICINO',
+    etichetta: 'Da domani',
+    quando: 'settimane',
+    aiuto: 'Cose che possiamo fare da soli, senza chiedere il permesso a nessuno.',
+  },
+  {
+    chiave: 'LUMINOSO',
+    etichetta: 'Entro l’anno',
+    quando: '6–18 mesi',
+    aiuto: 'Sviluppi di medio termine che portano valore nuovo, non solo più lavoro.',
+  },
+  {
+    chiave: 'LONTANO',
+    etichetta: 'Un giorno',
+    quando: 'oltre',
+    aiuto: 'Il cambio di sistema: dove finisce WDA se le cose vanno come speriamo.',
+  },
+];
+
+/* ------------------------------------------------------------------ */
 /* M1 — dove finisce ogni attività                                     */
 /* ------------------------------------------------------------------ */
 
@@ -318,4 +390,4 @@ export const TERMINI: Record<string, string> = {
 };
 
 /** L'arco completo, nell'ordine in cui si affronta. */
-export const ORDINE_MODULI: Modulo[] = ['M0', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9'];
+export const ORDINE_MODULI: Modulo[] = ['MQ', 'M0', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9'];

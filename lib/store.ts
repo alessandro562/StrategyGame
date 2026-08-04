@@ -15,7 +15,7 @@
 
 import { normalizzaEmail, type Utente } from './auth';
 import { redis } from './redis';
-import { statoIniziale } from './seed';
+import { quadroIniziale, statoIniziale } from './seed';
 import type { Commit, Store } from './types';
 
 const K_VERSION = 'room:version';
@@ -46,7 +46,25 @@ export async function caricaStato(): Promise<StatoVersionato> {
     const v = ver === null ? await r.incr(K_VERSION) : Number(ver);
     return { version: v, state: iniziale };
   }
-  return { version: Number(ver ?? 0), state: JSON.parse(grezzo) as Store };
+  return { version: Number(ver ?? 0), state: migra(JSON.parse(grezzo) as Store) };
+}
+
+/**
+ * Lo stato su Redis sopravvive ai deploy: una stanza aperta prima che un campo
+ * esistesse continua a tornare senza quel campo, e il primo handler che fa
+ * `state.x.push()` prende un TypeError e restituisce 500 a chi ha toccato il
+ * bottone. Qui si riempiono i buchi, in lettura, una volta per ogni carico.
+ *
+ * Non è un sistema di migrazioni e non deve diventarlo: se un giorno servisse
+ * trasformare dei dati e non solo aggiungerne di mancanti, quella è un'altra
+ * cosa e va scritta altrove.
+ */
+function migra(s: Store): Store {
+  // MQ è arrivato dopo. Una stanza che non ha mai visto il quadro riceve
+  // quello precompilato, non un array vuoto: la tabella vuota è precisamente
+  // ciò che il modulo esiste per evitare.
+  if (!Array.isArray(s.quadro)) s.quadro = quadroIniziale();
+  return s;
 }
 
 /**

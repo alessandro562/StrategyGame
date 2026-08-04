@@ -3,7 +3,7 @@
  * far partire il tavolo in meno di cinque minuti, non a fissare la verità.
  */
 
-import type { Attivita, Store } from './types';
+import type { Attivita, ColonnaQuadro, RigaQuadro, Store, VoceQuadro } from './types';
 
 export const CODICE_STANZA_DEFAULT = process.env.NEXT_PUBLIC_ROOM_CODE || 'ritiro';
 
@@ -44,6 +44,50 @@ function attivitaDa(nomi: string[], prefisso: string): Attivita[] {
   }));
 }
 
+
+/**
+ * Il quadro parte già pieno di ciò che WDA fa davvero oggi, e di chi ha di
+ * fronte. Una tabella vuota è un invito a non compilarla: davanti a sei
+ * caselle bianche nessuno comincia. Davanti a quello che già facciamo, si
+ * comincia a discutere.
+ *
+ * Le colonne «futuro» restano vuote apposta: quelle sono la domanda.
+ */
+export function quadroIniziale(): VoceQuadro[] {
+  const voci: [RigaQuadro, ColonnaQuadro, string][] = [
+    ['SERVIZI', 'OGGI', 'Venture building per conto di terzi'],
+    ['SERVIZI', 'OGGI', 'CXO as a Service'],
+    ['SERVIZI', 'OGGI', 'Programmi di open innovation'],
+    ['SERVIZI', 'OGGI', 'Analisi di mercato e deck strategici'],
+    ['SERVIZI', 'OGGI', 'Consulenza AI a PMI e corporate'],
+    ['SERVIZI', 'COMPETITOR', 'Big consulting: stessa offerta, firma che nessuno contesta'],
+    ['SERVIZI', 'COMPETITOR', 'Boutique AI: più verticali e più economiche'],
+
+    ['PRODOTTI', 'OGGI', 'Nessun prodotto ricorrente: tutto su commessa'],
+    ['PRODOTTI', 'COMPETITOR', 'Venture builder con portafoglio proprio'],
+
+    ['MERCATO', 'OGGI', 'Corporate e PMI italiane, innovazione e AI'],
+    ['MERCATO', 'COMPETITOR', 'Freelance senior con stack AI, costo marginale'],
+
+    ['CLIENTI', 'OGGI', 'Direzioni innovazione e general management'],
+    ['CLIENTI', 'COMPETITOR', 'Il cliente che si fa le cose da solo con l’AI'],
+
+    ['PARTNER', 'OGGI', 'Impacta Strategy — trattativa in corso'],
+    ['PARTNER', 'OGGI', 'Startup, investitori, vendor tecnologici'],
+
+    ['REVENUE', 'OGGI', 'Prevalentemente a giornata e a progetto'],
+    ['REVENUE', 'COMPETITOR', 'Chi lavora a success fee o con equity'],
+  ];
+  return voci.map(([riga, colonna, testo], i) => ({
+    id: `q-seed-${i + 1}`,
+    riga,
+    colonna,
+    testo,
+    autoreId: 'seed',
+    ts: 0,
+  }));
+}
+
 export function statoIniziale(codiceStanza = CODICE_STANZA_DEFAULT): Store {
   return {
     workshop: {
@@ -57,6 +101,7 @@ export function statoIniziale(codiceStanza = CODICE_STANZA_DEFAULT): Store {
       forbiceOriginale: null,
       lockPrevisti: 9,
     },
+    quadro: quadroIniziale(),
     partecipanti: NOMI.map((nome, i) => ({
       id: `p${i + 1}`,
       nome,

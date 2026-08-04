@@ -13,7 +13,7 @@
  * me, quanto manca.
  */
 
-import type { Sessione, StatoSessione } from '@/lib/types';
+import type { Modulo, Sessione, StatoSessione } from '@/lib/types';
 import { FASI } from '@/lib/glossario';
 
 interface Testo {
@@ -70,6 +70,36 @@ const TESTI: Record<StatoSessione, Testo> = {
 };
 
 /**
+ * Due moduli usano SETUP come fase di lavoro invece che di preparazione, e per
+ * loro il testo standard è falso: diceva «qui non serve fare nulla» sul telefono
+ * mentre lo stesso telefono, tre centimetri più sotto, chiedeva di scrivere. Una
+ * fascia che contraddice la schermata che sormonta è peggio di nessuna fascia.
+ */
+const SETUP_PER_MODULO: Partial<Record<Modulo, Testo>> = {
+  MQ: {
+    tavolo:
+      'Ognuno scrive dal proprio telefono, tutti insieme. Le voci compaiono qui appena arrivano.',
+    mano: 'Scrivi tu, adesso. Quante voci vuoi, in qualsiasi casella: non è un voto e non c’è un turno.',
+    colore: 'var(--live)',
+    modo: 'ognuno',
+  },
+  M0: {
+    tavolo: 'Ognuno si presenta dal proprio telefono. Il tavolo si popola da solo.',
+    mano: 'Dì chi sei e che ruolo hai. Serve una volta sola, poi non te lo chiede più.',
+    colore: 'var(--live)',
+    modo: 'ognuno',
+  },
+};
+
+function testoFase(sessione: Sessione): Testo {
+  if (sessione.stato === 'SETUP') {
+    const override = SETUP_PER_MODULO[sessione.modulo];
+    if (override) return override;
+  }
+  return TESTI[sessione.stato];
+}
+
+/**
  * Il nome leggibile della fase. Esportato perché la barra del Tavolo e il
  * piede della Mano mostravano la chiave grezza dell'enum (`COMMIT`,
  * `DISCUSSIONE`) mentre questa fascia, sullo stesso schermo e a pochi
@@ -107,7 +137,7 @@ export function FasciaFase({
     );
   }
 
-  const t = TESTI[sessione.stato];
+  const t = testoFase(sessione);
 
   return (
     <div
@@ -157,7 +187,7 @@ export function FaseMano({ sessione }: { sessione: Sessione | null }) {
       </span>
     );
   }
-  const t = TESTI[sessione.stato];
+  const t = testoFase(sessione);
   return (
     <div className="flex items-start gap-3">
       <EtichettaModo modo={t.modo} />
