@@ -194,7 +194,7 @@ export function filterStateFor(input: IngressoFiltro): StatoFiltrato {
     serverNow: ora,
     visti,
     io: pid,
-    sonoFacilitatore: state.workshop.facilitatoreId === pid,
+    sonoFacilitatore: state.workshop.facilitatoreId === pid || eMaster(state, pid),
   };
 }
 
@@ -221,10 +221,18 @@ export function verificaStanza(state: Store, codice: string | null): void {
   }
 }
 
+/** true se il pid appartiene all'account master (§EMAIL_MASTER in lib/auth.ts). */
+export function eMaster(state: Store, pid: string): boolean {
+  return state.partecipanti.some((p) => p.id === pid && p.master === true);
+}
+
 export function eFacilitatore(state: Store, pid: string): boolean {
   // Se nessuno ha ancora rivendicato il ruolo, il primo che agisce lo prende:
   // in una stanza di sei persone è la regola più semplice che funziona.
-  return state.workshop.facilitatoreId === null || state.workshop.facilitatoreId === pid;
+  // Il master ha sempre i diritti, anche se il ruolo è già di qualcun altro:
+  // è la persona che deve poter riprendere il controllo senza dover litigare
+  // con l'interfaccia se un dispositivo muore a metà pomeriggio.
+  return state.workshop.facilitatoreId === null || state.workshop.facilitatoreId === pid || eMaster(state, pid);
 }
 
 export function verificaAzione(state: Store, pid: string, azione: Action): void {

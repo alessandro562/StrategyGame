@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { ErroreGuardia, filterStateFor, verificaAzione } from '@/lib/guards';
+import { ErroreGuardia, eFacilitatore, filterStateFor, verificaAzione } from '@/lib/guards';
 import { statoIniziale } from '@/lib/seed';
 import type { Commit, Sessione, Store } from '@/lib/types';
 
@@ -305,6 +305,68 @@ describe('identità', () => {
     });
     expect(JSON.stringify(perIntruso)).not.toContain(SEGRETO_DI_A);
     expect(perIntruso.commits).toHaveLength(0);
+  });
+});
+
+describe('utente master', () => {
+  it('ha diritti da facilitatore anche se il ruolo è di un altro', () => {
+    const store = statoIniziale();
+    store.workshop.facilitatoreId = 'p1';
+    store.partecipanti.push({
+      id: 'u-master',
+      nome: 'Alessandro',
+      profilo: 'operativo',
+      presente: true,
+      socketConnesso: true,
+      master: true,
+    });
+    expect(eFacilitatore(store, 'u-master')).toBe(true);
+    // e chi non è né facilitatore né master resta escluso
+    expect(eFacilitatore(store, 'p2')).toBe(false);
+  });
+
+  it('un\'azione riservata al facilitatore passa per il master', () => {
+    const store = statoIniziale();
+    store.workshop.facilitatoreId = 'p1';
+    store.partecipanti.push({
+      id: 'u-master',
+      nome: 'Alessandro',
+      profilo: 'operativo',
+      presente: true,
+      socketConnesso: true,
+      master: true,
+    });
+    const s = sessioneDi(store);
+    expect(() => verificaAzione(store, 'u-master', { type: 'session.reveal', payload: { sessioneId: s.id } })).not.toThrow();
+  });
+
+  it('sonoFacilitatore è vero per il master anche senza il ruolo', () => {
+    const store = statoIniziale();
+    store.workshop.facilitatoreId = 'p1';
+    store.partecipanti.push({
+      id: 'u-master',
+      nome: 'Alessandro',
+      profilo: 'operativo',
+      presente: true,
+      socketConnesso: true,
+      master: true,
+    });
+    const filtrato = filterStateFor({
+      state: store,
+      commits: [],
+      pid: 'u-master',
+      ruolo: 'mano',
+      visti: {},
+      ora: 1,
+      segretoAnonimo: SEGRETO,
+    });
+    expect(filtrato.sonoFacilitatore).toBe(true);
+  });
+
+  it('senza il flag master, non facilitatore resta senza diritti', () => {
+    const store = statoIniziale();
+    store.workshop.facilitatoreId = 'p1';
+    expect(eFacilitatore(store, 'p2')).toBe(false);
   });
 });
 

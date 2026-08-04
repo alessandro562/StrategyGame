@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   COOKIE_SESSIONE,
   DURATA_SESSIONE_S,
+  EMAIL_MASTER,
   cifraPassword,
   emailValida,
   firmaSessione,
@@ -127,24 +128,36 @@ async function entra(utente: Utente) {
  * Il collegamento avviene una volta sola, alla prima entrata.
  */
 async function collegaAlTavolo(utente: Utente): Promise<void> {
+  const master = normalizzaEmail(utente.email) === normalizzaEmail(EMAIL_MASTER);
+
   await muta((s) => {
-    if (s.partecipanti.some((p) => p.id === utente.id)) return;
+    const esistente = s.partecipanti.find((p) => p.id === utente.id);
+    if (esistente) {
+      if (master) esistente.master = true;
+      return;
+    }
 
     const perNome = s.partecipanti.find(
       (p) => p.nome.trim().toLowerCase() === utente.nome.trim().toLowerCase(),
     );
-    if (perNome) perNome.id = utente.id;
-    else {
+    if (perNome) {
+      perNome.id = utente.id;
+      if (master) perNome.master = true;
+    } else {
       s.partecipanti.push({
         id: utente.id,
         nome: utente.nome,
         profilo: 'operativo',
         presente: true,
         socketConnesso: true,
+        master: master || undefined,
       });
     }
 
-    // Il primo che entra tiene il timone finché qualcuno non lo prende.
-    if (s.workshop.facilitatoreId === null) s.workshop.facilitatoreId = utente.id;
+    // Il primo che entra tiene il timone finché qualcuno non lo prende. Il
+    // master non ne ha bisogno — eFacilitatore() gli dà i diritti comunque —
+    // quindi non si intesta il ruolo, per non nascondere a chi è affidato in
+    // quel momento sull'interfaccia.
+    if (s.workshop.facilitatoreId === null && !master) s.workshop.facilitatoreId = utente.id;
   });
 }

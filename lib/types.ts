@@ -61,6 +61,8 @@ export interface Partecipante {
   presente: boolean;
   /** Dedotto dal polling lato server (§9), mai scritto dal client. */
   socketConnesso: boolean;
+  /** Ha sempre i diritti da facilitatore, a prescindere da chi ha rivendicato il ruolo. */
+  master?: boolean;
 }
 
 export interface Sessione {

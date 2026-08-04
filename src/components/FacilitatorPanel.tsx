@@ -41,7 +41,7 @@ export function FacilitatorPanel({ ctx, chiudi }: { ctx: Contesto; chiudi: () =>
     >
       <div
         className="pannello h-full overflow-y-auto barra-scorrimento p-5 flex flex-col gap-5"
-        style={{ width: 420 }}
+        style={{ width: 420, maxWidth: '100%' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
