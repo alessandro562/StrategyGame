@@ -143,7 +143,7 @@ export function M3Tavolo({ sessione }: { sessione: Sessione }) {
                     y={cy + 4}
                     textAnchor="middle"
                     fontSize={a.fisso ? 14 : 10}
-                    fill={a.fisso ? '#fff' : 'var(--ink-dim)'}
+                    fill={a.fisso ? 'var(--ink-inverso)' : 'var(--ink-dim)'}
                     fontFamily="var(--font-mono)"
                     style={{ pointerEvents: 'none' }}
                   >

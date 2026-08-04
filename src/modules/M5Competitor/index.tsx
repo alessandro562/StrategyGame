@@ -202,7 +202,7 @@ export function M5Mano({ sessione }: { sessione: Sessione }) {
         style={{
           border: `1px solid ${scelto === true ? 'var(--live)' : 'var(--line-strong)'}`,
           background: scelto === true ? 'var(--live)' : 'var(--bg-raised)',
-          color: scelto === true ? '#0b0e12' : 'var(--ink)',
+          color: scelto === true ? 'var(--ink-inverso)' : 'var(--ink)',
           fontSize: 22,
         }}
         onClick={() => vota(true)}
@@ -214,7 +214,7 @@ export function M5Mano({ sessione }: { sessione: Sessione }) {
         style={{
           border: `1px solid ${scelto === false ? 'var(--erosion)' : 'var(--line-strong)'}`,
           background: scelto === false ? 'var(--erosion)' : 'var(--bg-raised)',
-          color: scelto === false ? '#0b0e12' : 'var(--ink)',
+          color: scelto === false ? 'var(--ink-inverso)' : 'var(--ink)',
           fontSize: 22,
         }}
         onClick={() => vota(false)}

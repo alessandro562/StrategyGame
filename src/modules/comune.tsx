@@ -111,7 +111,7 @@ export function BottoneTocco({
         minHeight: 48,
         border: `1px solid ${attivo ? c : 'var(--line-strong)'}`,
         background: attivo ? c : 'var(--bg-raised)',
-        color: attivo ? '#0b0e12' : 'var(--ink-dim)',
+        color: attivo ? 'var(--ink-inverso)' : 'var(--ink-dim)',
         fontWeight: attivo ? 500 : 400,
         borderRadius: 'var(--radius)',
       }}

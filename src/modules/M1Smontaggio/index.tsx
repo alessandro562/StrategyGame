@@ -418,7 +418,7 @@ function BarraAttivita({ esiti, cieca = false }: { esiti: ReturnType<typeof esit
           >
             <span
               className="mono text-[10px]"
-              style={{ color: e.esito === 'UMANO' ? '#0b0e12' : 'var(--ink)' }}
+              style={{ color: e.esito === 'UMANO' ? 'var(--ink-inverso)' : 'var(--ink)' }}
             >
               {e.quotaPct}%
             </span>

@@ -1,30 +1,50 @@
 /**
- * Sistema visivo — §8.
+ * Sistema visivo — §8, su fondo chiaro.
  *
- * Control room, non workshop. Densa, scura, strumentale.
- * Un solo accento per volta a schermo. Il colore codifica stato, mai
- * decorazione. Nessuna ombra, nessun gradiente.
+ * La specifica sceglieva il fondo scuro per una ragione di tono. Il fondo
+ * chiaro nasce da una ragione di sala che pesa di più: su un proiettore in una
+ * stanza illuminata il nero si slava e i grigi spariscono, mentre il bianco
+ * regge. Resta il resto della direzione — densa, strumentale, un solo accento
+ * per volta, il colore codifica stato e mai decorazione, nessuna ombra e
+ * nessun gradiente. Control room stampata su carta, non pastello.
  *
- * Il blu WDA (#3D6C92, campionato dal logo in public/brand) è il colore del
- * marchio e dello stato "bloccato": è l'unico punto in cui identità e semantica
- * coincidono, ed è coerente — un artefatto bloccato è WDA che ha deciso.
- * Sui fondi scuri il blu del logo non ha contrasto sufficiente, quindi la
- * versione schiarita --wda-bright è quella che porta il testo e i tratti fini;
- * --wda resta per riempimenti e superfici.
+ * CONTRATTO DEI TOKEN. Ogni valore qui sotto è verificato in contrasto:
+ * il testo sta sopra 4.5:1 sul proprio fondo, i contorni dei controlli sopra
+ * 3:1. Chi tocca un colore rifà il conto — a occhio, su fondo chiaro, si
+ * sbaglia sempre per difetto.
+ *
+ *   --ink / --ink-dim / --ink-faint   testo, in tre livelli di gerarchia
+ *   --bg-deep / --bg-panel / --bg-raised
+ *                                     su chiaro la profondità va verso il
+ *                                     basso: la pagina è bianca, i pannelli
+ *                                     appena grigi, il rialzato più grigio
+ *   --line / --line-strong            separatore decorativo / contorno di
+ *                                     controllo (input, bottoni)
+ *   --wda-bright                      il blu che porta TESTO e tratti fini
+ *   --wda                             il blu dei RIEMPIMENTI
+ *   --ink-inverso                     il testo sopra un riempimento d'accento
+ *
+ * I due ruoli del blu si invertono col tema: su fondo scuro serviva una
+ * versione schiarita per il testo, su fondo chiaro ne serve una scurita. Il
+ * nome --wda-bright indica il ruolo («quello che porta il testo»), non la
+ * luminosità.
  */
 
 :root {
-  --bg-deep: #0b0e12;
-  --bg-panel: #12161c;
-  --bg-raised: #1a1f27;
-  --line: #242a33;
-  --line-strong: #38414e;
+  --bg-deep: #ffffff;
+  --bg-panel: #fafbfc;
+  --bg-raised: #f2f4f7;
+  --line: #e5e8ec;
+  /* 3.04:1 su bianco: è il minimo per un contorno di controllo. Più chiaro di
+     così gli input smettono di avere un bordo percepibile. */
+  --line-strong: #8b95a1;
 
-  --ink: #e9ebee;
-  /* Alzati rispetto alla prima stesura: su un proiettore, e su uno schermo
-     lucido in una stanza illuminata, #8b939f e #5a626d sparivano. */
-  --ink-dim: #9ba3af;
-  --ink-faint: #7b838f;
+  --ink: #14181d; /* 17.8:1 */
+  --ink-dim: #59616c; /* 6.3:1 */
+  --ink-faint: #6b7480; /* 4.7:1 */
+  /* Testo e icone sopra un riempimento pieno di --live, --wda, --erosion o
+     --tension: tutti e quattro reggono il bianco sopra i 5:1. */
+  --ink-inverso: #ffffff;
 
   /* Fattore di ingrandimento della vista di sala. Il Tavolo sta a tre metri
      dalle persone, non a cinquanta centimetri: la stessa interfaccia che è
@@ -33,16 +53,17 @@
      proiettori. */
   --scala: 1;
 
-  /* Marchio WDA */
+  /* Marchio WDA. Il blu del logo (#3d6c92) è già a 5.6:1 su bianco: resta
+     tale e quale per i riempimenti, e si scurisce per il testo. */
   --wda: #3d6c92;
-  --wda-bright: #6fa3ce;
-  --wda-deep: #24425a;
-  --wda-wash: rgba(61, 108, 146, 0.16);
+  --wda-bright: #2b5175; /* 8.3:1 — testo e tratti fini */
+  --wda-deep: #1e3a52;
+  --wda-wash: rgba(61, 108, 146, 0.09);
 
-  --live: #4ade9b; /* attivo, commit ricevuto, residuo umano */
-  --tension: #f0a742; /* divergenza, timer in scadenza */
-  --erosion: #e8674a; /* erosione, vulnerabilità, chiuso */
-  --locked: #6fa3ce; /* artefatto bloccato — famiglia WDA */
+  --live: #0e7c4f; /* 5.2:1 — attivo, commit ricevuto, residuo umano */
+  --tension: #a05a00; /* 5.3:1 — divergenza, timer in scadenza */
+  --erosion: #c0341c; /* 5.6:1 — erosione, vulnerabilità, chiuso */
+  --locked: #2b5175; /* artefatto bloccato — famiglia WDA */
 
   --radius: 2px;
   --grid: 4px;
@@ -119,7 +140,7 @@ select:focus {
 
 ::selection {
   background: var(--wda);
-  color: #fff;
+  color: var(--ink-inverso);
 }
 
 /* --- utilità --------------------------------------------------------- */
@@ -171,7 +192,7 @@ select:focus {
 
 .bottone-primario:hover:not(:disabled) {
   background: var(--wda);
-  color: #fff;
+  color: var(--ink-inverso);
 }
 
 .bottone[aria-pressed='true'] {
@@ -202,6 +223,7 @@ select:focus {
 
 /* Tratteggio per le attività MORTE (§M1 passo 3) */
 .tratteggio {
+  background-color: var(--bg-deep);
   background-image: repeating-linear-gradient(
     45deg,
     var(--erosion) 0,

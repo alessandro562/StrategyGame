@@ -16,7 +16,9 @@ export function QrCode({ url, lato = 132 }: { url: string; lato?: number }) {
     void QRCode.toDataURL(url, {
       width: lato * 2,
       margin: 1,
-      color: { dark: '#e6e8ebff', light: '#0b0e12ff' },
+      // Il QR si legge col modulo scuro su fondo chiaro: invertirlo rompe molti
+      // lettori di fotocamera, che non tutti gestiscono il negativo.
+      color: { dark: '#14181dff', light: '#ffffffff' },
       errorCorrectionLevel: 'M',
     }).then((d) => {
       if (vivo) setDataUrl(d);
