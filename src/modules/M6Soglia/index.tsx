@@ -14,25 +14,16 @@
  * cambia solo ciò che si legge.
  */
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { forbice, mescolaConSeme } from '@/lib/calc';
 import { TERMINI } from '@/lib/glossario';
 import type { Sessione } from '@/lib/types';
-import { CompitoMano, Premessa, StatoCommitMano } from '../comune';
+import { CompitoMano, Istruzione, Premessa, StatoCommitMano } from '../comune';
 import { CommitBar } from '@/components/CommitBar';
 import { LockButton } from '@/components/LockButton';
 import { TestataModulo } from '@/components/TestataModulo';
 import { useRevealPartito } from '@/components/RevealStage';
 import { useStore } from '@/net/useStore';
-
-/** Una riga asciutta che dice cosa si fa adesso, senza incoraggiamenti. */
-function Istruzione({ children }: { children: ReactNode }) {
-  return (
-    <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-      {children}
-    </p>
-  );
-}
 
 /** Tacche dell'asse 0-100. */
 const TACCHE = [0, 25, 50, 75, 100];

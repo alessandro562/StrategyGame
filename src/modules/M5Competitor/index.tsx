@@ -8,28 +8,15 @@
  * scriverle, si contrattano a voce mentre il tempo scorre.
  */
 
-import type { ReactNode } from 'react';
 import { MODULI, TERMINI } from '@/lib/glossario';
 import type { Sessione } from '@/lib/types';
-import { CompitoMano, Vuoto } from '../comune';
+import { CompitoMano, Istruzione, Vuoto } from '../comune';
 import { TestataModulo, TestataModuloMano } from '@/components/TestataModulo';
 import { Timer } from '@/components/Timer';
 import { useRevealPartito } from '@/components/RevealStage';
 import { useStore } from '@/net/useStore';
 
 export const DURATA_RISPOSTA_S = 90;
-
-/** Una riga asciutta che dice cosa si fa adesso, senza incoraggiamenti. */
-function Istruzione({ children, centrata }: { children: ReactNode; centrata?: boolean }) {
-  return (
-    <p
-      className={`m-0 text-[13px] max-w-[42rem] ${centrata ? 'text-center' : ''}`}
-      style={{ color: 'var(--ink-dim)' }}
-    >
-      {children}
-    </p>
-  );
-}
 
 export function M5Tavolo({ sessione }: { sessione: Sessione }) {
   const ctx = useStore();

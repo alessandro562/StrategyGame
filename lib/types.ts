@@ -9,7 +9,7 @@ export type Destinazione = 'AI' | 'UMANO' | 'MORTA';
 export type Bucket = 'NUCLEO' | 'PORTA' | 'CHIUSO';
 export type BasePrezzo = 'ACCESSO' | 'ESITO' | 'PARTECIPAZIONE' | 'VOLUME' | 'GIORNATA';
 export type Cappello = 'CASHFLOW' | 'COSTRUTTORE' | 'COMPRATORE' | 'CLIENTE' | 'PARTNER' | 'ESTERNO';
-export type Modulo = 'M0' | 'M1' | 'M2' | 'M3' | 'M4' | 'M5' | 'M6' | 'M7' | 'M8' | 'M9';
+export type Modulo = 'MQ' | 'M0' | 'M1' | 'M2' | 'M3' | 'M4' | 'M5' | 'M6' | 'M7' | 'M8' | 'M9';
 export type Qualitativo = 'basso' | 'medio' | 'alto';
 export type Vincolo = number | Qualitativo;
 export type Scenario = 'ENTRAMBI' | 'AUTONOMO' | 'SUB_BRAND';
@@ -235,8 +235,42 @@ export interface Workshop {
   lockPrevisti: number;
 }
 
+/* ------------------------------------------------------------------ */
+/* MQ — il quadro d'insieme                                            */
+/* ------------------------------------------------------------------ */
+
+/** Le sei dimensioni con cui si guarda l'azienda. */
+export type RigaQuadro = 'SERVIZI' | 'PRODOTTI' | 'MERCATO' | 'CLIENTI' | 'PARTNER' | 'REVENUE';
+
+/** I tre tempi: cosa facciamo, cosa fanno gli altri, dove vogliamo andare. */
+export type ColonnaQuadro = 'OGGI' | 'COMPETITOR' | 'FUTURO';
+
+/**
+ * Solo per la colonna FUTURO, e presa dal Future Canvas: una colonna «futuro»
+ * senza orizzonti diventa una poltiglia in cui «assumere un commerciale» e
+ * «cambiare mestiere» stanno sulla stessa riga. Distinguere quanto è lontana
+ * una cosa è metà del lavoro di deciderla.
+ */
+export type OrizzonteQuadro = 'VICINO' | 'LUMINOSO' | 'LONTANO';
+
+/**
+ * Una voce nel quadro. Non è un voto e non entra in nessun calcolo: è un
+ * post-it condiviso, e chiunque può metterne uno in qualsiasi casella.
+ */
+export interface VoceQuadro {
+  id: string;
+  riga: RigaQuadro;
+  colonna: ColonnaQuadro;
+  testo: string;
+  autoreId: string;
+  ts: number;
+  /** Valorizzato solo sulle voci in colonna FUTURO. */
+  orizzonte?: OrizzonteQuadro;
+}
+
 export interface Store {
   workshop: Workshop;
+  quadro: VoceQuadro[];
   partecipanti: Partecipante[];
   sessioni: Sessione[];
   servizi: Servizio[];

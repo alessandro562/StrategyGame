@@ -315,6 +315,40 @@ export function applica(ctx: Contesto, azione: Action): void {
       return;
     }
 
+    case 'quadro.aggiungi': {
+      const testo = azione.payload.testo.trim();
+      if (!testo) return;
+      state.quadro.push({
+        id: nuovoId('q'),
+        riga: azione.payload.riga,
+        colonna: azione.payload.colonna,
+        testo,
+        autoreId: pid,
+        ts: ora,
+        // L'orizzonte esiste solo nel futuro: su «cosa facciamo» non vuol dire
+        // niente, e lasciarlo passare produrrebbe pastiglie senza senso.
+        ...(azione.payload.colonna === 'FUTURO' && azione.payload.orizzonte
+          ? { orizzonte: azione.payload.orizzonte }
+          : {}),
+      });
+      return;
+    }
+
+    case 'quadro.modifica': {
+      const v = state.quadro.find((x) => x.id === azione.payload.id);
+      if (!v) return;
+      const testo = azione.payload.testo.trim();
+      if (!testo) return;
+      v.testo = testo;
+      return;
+    }
+
+    case 'quadro.rimuovi': {
+      const i = state.quadro.findIndex((x) => x.id === azione.payload.id);
+      if (i >= 0) state.quadro.splice(i, 1);
+      return;
+    }
+
     case 'discussion.note': {
       state.note.push({
         id: nuovoId('n'),
@@ -538,7 +572,7 @@ function testoProposta(state: Store, modulo: string, titolo: string): string {
     case 'M6':
       return `Impostare il monitoraggio mensile della soglia (${state.workshop.sogliaCondivisaPct ?? '—'}%)`;
     case 'M7':
-      return `Portare l'invariante "${titolo}" in una pagina pubblica`;
+      return `Portare la no-regret move "${titolo}" in una pagina pubblica`;
     default:
       return `Dare seguito a: ${titolo}`;
   }

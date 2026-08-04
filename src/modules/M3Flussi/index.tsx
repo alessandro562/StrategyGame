@@ -13,11 +13,11 @@
  * SVG puro e pointer events, nessuna libreria di grafi.
  */
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { archiAggregati, diagnosiPosizione, flussiDistinti, type DiagnosiPosizione } from '@/lib/calc';
-import { BUCKET_GLOSSA, FASI, MODULI, TERMINI } from '@/lib/glossario';
+import { BUCKET_GLOSSA, DIAGNOSI_GLOSSA, FASI, MODULI, TERMINI } from '@/lib/glossario';
 import type { Attore, Sessione } from '@/lib/types';
-import { CompitoMano, StatoCommitMano, Vuoto } from '../comune';
+import { CompitoMano, Istruzione, StatoCommitMano, Vuoto } from '../comune';
 import { TestataModulo } from '@/components/TestataModulo';
 import { CommitBar } from '@/components/CommitBar';
 import { LockButton } from '@/components/LockButton';
@@ -31,35 +31,6 @@ const RAGGIO = 30;
 function posizione(a: Attore) {
   return { cx: a.x * LATO, cy: a.y * LATO };
 }
-
-/** Riga di istruzione: cosa si deve fare adesso, senza incoraggiamenti. */
-function Istruzione({ children }: { children: ReactNode }) {
-  return (
-    <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-      {children}
-    </p>
-  );
-}
-
-/**
- * Le tre diagnosi con la soglia che le produce e cosa vogliono dire.
- * Le soglie sono quelle di diagnosiPosizione(), riportate qui solo per
- * leggerle: la classificazione resta in lib/calc.
- */
-const DIAGNOSI_GLOSSA: Record<DiagnosiPosizione, { soglia: string; aiuto: string }> = {
-  'Intermediario sostituibile': {
-    soglia: '0–1',
-    aiuto: 'Chi sta ai due capi può parlarsi direttamente. Togliere WDA di mezzo non rompe niente.',
-  },
-  'Layer parziale': {
-    soglia: '2–3',
-    aiuto: 'Presidiamo qualche collegamento, non l’ecosistema. Sostituibili, ma con fatica.',
-  },
-  Infrastruttura: {
-    soglia: '4+',
-    aiuto: 'L’ecosistema passa da qui: senza WDA i collegamenti vanno ricostruiti uno per uno.',
-  },
-};
 
 const SCALA_DIAGNOSI: DiagnosiPosizione[] = [
   'Intermediario sostituibile',

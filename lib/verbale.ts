@@ -17,6 +17,15 @@ import {
   storicoCappelli,
   vettoreStrategia,
 } from './calc';
+import {
+  BASI_GLOSSA,
+  BUCKET_GLOSSA,
+  COLONNE_QUADRO,
+  MODULI,
+  ORIZZONTI_QUADRO,
+  RIGHE_QUADRO,
+  VINCOLI,
+} from './glossario';
 import type { Commit, Store } from './types';
 
 function data(ts: number): string {
@@ -47,8 +56,51 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   );
   w('');
 
-  /* 1-2. Decisioni bloccate e dissensi ------------------------------ */
-  w('## 1. Decisioni bloccate');
+  /* 1. Il quadro d'insieme ------------------------------------------ */
+  // Apre il verbale perché è da lì che è partita la giornata: chi lo rilegge a
+  // gennaio deve poter vedere da dove si era usciti prima di leggere cosa si è
+  // deciso. La colonna Futuro è riportata per orizzonte, non alla rinfusa.
+  w(`## 1. ${MODULI.MQ.nome}`);
+  w('');
+  const quadro = state.quadro ?? [];
+  if (quadro.length === 0) {
+    w('Il quadro è rimasto vuoto.');
+    w('');
+  } else {
+    for (const r of RIGHE_QUADRO) {
+      const dellaRiga = quadro.filter((v) => v.riga === r.chiave);
+      if (dellaRiga.length === 0) continue;
+      w(`### ${r.etichetta}`);
+      w('');
+      for (const c of COLONNE_QUADRO) {
+        const voci = dellaRiga.filter((v) => v.colonna === c.chiave);
+        if (voci.length === 0) continue;
+        w(`**${c.etichetta}**`);
+        w('');
+        if (c.chiave === 'FUTURO') {
+          for (const o of ORIZZONTI_QUADRO) {
+            const dellOrizzonte = voci.filter((v) => v.orizzonte === o.chiave);
+            if (dellOrizzonte.length === 0) continue;
+            w(`- _${o.etichetta} (${o.quando})_`);
+            for (const v of dellOrizzonte) w(`  - ${v.testo} — ${nome(v.autoreId)}`);
+          }
+          for (const v of voci.filter((v) => !v.orizzonte)) {
+            w(`- ${v.testo} — ${nome(v.autoreId)}`);
+          }
+        } else {
+          for (const v of voci) {
+            // Le voci precaricate non hanno un autore da citare: erano il punto
+            // di partenza, non il contributo di qualcuno.
+            w(v.autoreId === 'seed' ? `- ${v.testo}` : `- ${v.testo} — ${nome(v.autoreId)}`);
+          }
+        }
+        w('');
+      }
+    }
+  }
+
+  /* 2. Decisioni bloccate e dissensi -------------------------------- */
+  w('## 2. Decisioni bloccate');
   w('');
   const lockOrdinati = [...state.lock].sort((a, b) => a.timestamp - b.timestamp);
   if (lockOrdinati.length === 0) {
@@ -75,17 +127,15 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   }
 
   /* 3. Catalogo nei tre bucket -------------------------------------- */
-  w('## 2. Il catalogo nei tre bucket');
+  w('## 3. Il catalogo nei tre bucket');
   w('');
   const bucket = (b: string) => state.servizi.filter((s) => s.bucket === b);
-  const etichette: Record<string, string> = {
-    NUCLEO: 'Nucleo — stesso prezzo, un decimo del lavoro',
-    PORTA: 'Porta — in commoditizzazione, si tiene solo se apre relazioni',
-    CHIUSO: 'Chiuso — il servizio muore',
-  };
+  // Etichetta e glossa dal glossario: erano riscritte a mano qui, e dicevano
+  // «Porta» e «Chiuso» mentre lo schermo diceva «Apriporta» e «Da dismettere».
   for (const b of ['NUCLEO', 'PORTA', 'CHIUSO'] as const) {
     const servizi = bucket(b);
-    w(`### ${etichette[b]}`);
+    const g = BUCKET_GLOSSA[b];
+    w(`### ${g.etichetta} (${g.standard}) — ${g.aiuto}`);
     w('');
     if (servizi.length === 0) {
       w('_Nessun servizio._');
@@ -113,18 +163,21 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   }
 
   /* 4. Basi di prezzo ------------------------------------------------ */
-  w('## 3. Le basi di prezzo');
+  w('## 4. Le basi di prezzo');
   w('');
   const conBase = state.servizi.filter((s) => s.bucket !== 'CHIUSO');
   if (conBase.length === 0) {
     w('Nessun servizio in catalogo.');
   } else {
-    w('| Servizio | Base primaria | Base secondaria | Nota |');
+    // Etichette dal glossario, non l'enum grezzo: il verbale stampava
+    // «ACCESSO» dove lo schermo dice «Accesso (retainer)».
+    const base = (b: keyof typeof BASI_GLOSSA) => `${BASI_GLOSSA[b].etichetta} (${BASI_GLOSSA[b].standard})`;
+    w('| Servizio | Base principale | Seconda base | Nota |');
     w('|---|---|---|---|');
     for (const s of conBase) {
       const b = s.basePrezzo;
-      const primaria = b ? b.primaria : 'GIORNATA — erosione attesa';
-      w(`| ${s.nome} | ${primaria} | ${b?.secondaria ?? '—'} | ${b?.nota ?? '—'} |`);
+      const principale = b ? base(b.primaria) : `${base('GIORNATA')} — erosione attesa`;
+      w(`| ${s.nome} | ${principale} | ${b?.secondaria ? base(b.secondaria) : '—'} | ${b?.nota ?? '—'} |`);
     }
   }
   w('');
@@ -132,7 +185,7 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   w('');
 
   /* 5-6. Posizione e vettore ---------------------------------------- */
-  w('## 4. La posizione');
+  w('## 5. La posizione');
   w('');
   const distinti = flussiDistinti(state.flussi);
   w(`Flussi distinti su cui siede WDA: **${distinti}** — ${diagnosiPosizione(distinti)}.`);
@@ -147,7 +200,7 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
     w('');
   }
 
-  w('## 5. Il vettore di posizionamento');
+  w('## 6. Il vettore di posizionamento');
   w('');
   const asse = state.assi.find((a) => a.id === state.workshop.asseCorrenteId) ?? state.assi[0];
   const v = vettoreStrategia(state.posizionamenti);
@@ -171,7 +224,7 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   w('');
 
   /* 7. Vulnerabilità ------------------------------------------------- */
-  w('## 6. Vulnerabilità ancora aperte');
+  w('## 7. Vulnerabilità ancora aperte');
   w('');
   const aperte = state.vulnerabilita.filter((x) => x.chiusaA === null);
   if (aperte.length === 0) {
@@ -184,8 +237,8 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   }
   w('');
 
-  /* 8. Soglia e forbice ---------------------------------------------- */
-  w('## 7. La soglia di sostenibilità');
+  /* 8. Soglia e spread ------------------------------------------------ */
+  w(`## 8. ${MODULI.M6.nome}`);
   w('');
   const f = forbice(state.soglie);
   w(
@@ -193,7 +246,7 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   );
   w('');
   if (f.min !== null && f.max !== null) {
-    w(`Forbice originale: da ${num(f.min)}% a ${num(f.max)}% — **${num(f.ampiezza)} punti**.`);
+    w(`Spread registrato all'apertura: da ${num(f.min)}% a ${num(f.max)}% — **${num(f.ampiezza)} punti**.`);
     w('');
     w('Trigger di allarme raccolti (in ordine mescolato, non attribuiti):');
     w('');
@@ -211,16 +264,22 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
       w(`| ${t.etichetta} | ${num(t.quotaServiziPct)}% | ${t.consumo.R} | ${t.consumo.G} | ${t.consumo.B} |`);
     }
     w('');
+    // Senza legenda le tre colonne sono tre lettere: chi legge il verbale non
+    // era in stanza quando si sono compilate in M0.
+    w(`Consumo per trimestre delle tre risorse scarse: ${VINCOLI.map((v) => `**${v.chiave}** ${v.nome.toLowerCase()}`).join(', ')}.`);
+    w('');
   }
 
-  /* 9. Invarianti ---------------------------------------------------- */
-  w('## 8. Invarianti');
+  /* 9. No-regret moves ------------------------------------------------ */
+  // `state.invarianti` resta il nome nel modello dati; a schermo e sul verbale
+  // le due liste si chiamano «no-regret moves» e «condizionate».
+  w(`## 9. ${MODULI.M7.nome}`);
   w('');
   const invarianti = state.invarianti.filter((i) => i.scenario === 'ENTRAMBI');
-  if (invarianti.length === 0) w('_Nessun invariante._');
+  if (invarianti.length === 0) w('_Nessuna no-regret move._');
   for (const i of invarianti) w(`- ${i.testo}`);
   w('');
-  w('## 9. Condizionati');
+  w('## 10. Condizionate');
   w('');
   const condizionati = state.invarianti.filter((i) => i.scenario !== 'ENTRAMBI');
   if (condizionati.length === 0) w('_Nessuna affermazione condizionata._');
@@ -231,7 +290,7 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   w('');
 
   /* 10. Action plan --------------------------------------------------- */
-  w('## 10. Action plan');
+  w('## 11. Action plan');
   w('');
   const controlli = controlliM8(state.azioni, state.lock);
   if (state.azioni.length === 0) {
@@ -276,7 +335,7 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   }
 
   /* 11. Cappelli ------------------------------------------------------ */
-  w('## 11. Mappa cappello × persona');
+  w('## 12. Mappa cappello × persona');
   w('');
   const storico = storicoCappelli(state.sessioni);
   if (Object.keys(storico).length === 0) {
@@ -292,7 +351,7 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   w('');
 
   /* 12. Riaperture ---------------------------------------------------- */
-  w('## 12. Decisioni riaperte');
+  w('## 13. Decisioni riaperte');
   w('');
   const { riaperti, aValle } = daRiconvalidare(state.lock);
   if (riaperti.length === 0) {
@@ -308,7 +367,7 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   /* Note di discussione ------------------------------------------------ */
   const pubbliche = state.note.filter((n) => !n.privata);
   if (pubbliche.length > 0) {
-    w('## 13. Note di discussione');
+    w('## 14. Note di discussione');
     w('');
     for (const n of pubbliche.sort((a, b) => a.ts - b.ts)) {
       const s = state.sessioni.find((x) => x.id === n.sessioneId);

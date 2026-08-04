@@ -6,11 +6,14 @@
 
 import type {
   Bucket,
+  ColonnaQuadro,
   CommitPayload,
   Destinazione,
   Modulo,
   Orizzonte,
+  OrizzonteQuadro,
   Profilo,
+  RigaQuadro,
   Scenario,
   StatoSessione,
 } from './types';
@@ -40,6 +43,13 @@ export type Action =
   | { type: 'session.reveal'; payload: { sessioneId: string } }
   | { type: 'session.setAnonimo'; payload: { sessioneId: string; revealAnonimo: boolean } }
   | { type: 'session.setRispondente'; payload: { sessioneId: string; rispondenteId: string } }
+  // Il quadro d'insieme è l'unica lavagna a scrittura libera: chiunque aggiunge
+  // una voce in qualsiasi casella, e ciascuno cancella le proprie (il
+  // facilitatore cancella tutto). Non passa da entity.upsert proprio perché
+  // quello è riservato al facilitatore.
+  | { type: 'quadro.aggiungi'; payload: { riga: RigaQuadro; colonna: ColonnaQuadro; testo: string; orizzonte?: OrizzonteQuadro } }
+  | { type: 'quadro.modifica'; payload: { id: string; testo: string } }
+  | { type: 'quadro.rimuovi'; payload: { id: string } }
   | { type: 'commit.set'; payload: { sessioneId: string; payload: CommitPayload } }
   | { type: 'commit.confirm'; payload: { sessioneId: string } }
   | { type: 'discussion.note'; payload: { sessioneId: string; testo: string; privata?: boolean } }

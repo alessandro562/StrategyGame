@@ -1,25 +1,28 @@
 'use client';
 
 /**
- * M7 — Gli invarianti. Il tool non decide il brand.
+ * M7 — No-regret moves. Il tool non decide il brand.
  * Due liste: ciò che regge in entrambi gli scenari e si può cominciare a
  * costruire da subito, e ciò che resta appeso all'esito della trattativa.
+ *
+ * A schermo «invariante» è diventato «no-regret move», che è il termine con
+ * cui la stessa distinzione circola in strategia. Il nome nel codice e nel
+ * modello dati resta invariante — cambia solo ciò che si legge.
  */
 
 import { useState } from 'react';
+import { SCENARI_GLOSSA } from '@/lib/glossario';
 import type { Scenario, Sessione } from '@/lib/types';
-import { BottoneTocco, CompitoMano, Intestazione, StatoCommitMano } from '../comune';
+import { BottoneTocco, CompitoMano, Istruzione, Premessa, StatoCommitMano } from '../comune';
 import { CommitBar } from '@/components/CommitBar';
 import { LockButton } from '@/components/LockButton';
 import { RevealStage, useRevealPartito } from '@/components/RevealStage';
+import { TestataModulo } from '@/components/TestataModulo';
 import { useBozzaCommit } from '@/net/useBozza';
 import { useStore } from '@/net/useStore';
 
-const SCENARI: { chiave: Scenario; breve: string; lungo: string }[] = [
-  { chiave: 'ENTRAMBI', breve: 'entrambi', lungo: 'Regge in entrambi gli scenari' },
-  { chiave: 'AUTONOMO', breve: 'solo autonomo', lungo: 'Solo con brand autonomo' },
-  { chiave: 'SUB_BRAND', breve: 'solo sub-brand', lungo: 'Solo come sub-brand con partner industriale' },
-];
+/** L'ordine in cui i tre scenari compaiono ovunque. Le etichette dal glossario. */
+const SCENARI: Scenario[] = ['ENTRAMBI', 'AUTONOMO', 'SUB_BRAND'];
 
 /** Larghezze delle colonne del tabellone: intestazioni e conteggi restano incolonnati. */
 const COL_VOTI = 'w-32 text-right shrink-0 whitespace-nowrap';
@@ -41,15 +44,36 @@ export function M7Tavolo({ sessione }: { sessione: Sessione }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Intestazione
-        modulo="M7"
-        titolo="Gli invarianti"
-        sottotitolo="Brand autonomo contro sub-brand con partner industriale. Il tool non decide il brand."
-      />
+      <TestataModulo modulo="M7" />
+
+      <Premessa>
+        I due scenari sono un brand autonomo e un sub-brand dentro l’accordo con il partner industriale. Il tool non
+        decide quale dei due: separa ciò che si può cominciare in ogni caso da ciò che dipende dall’esito della
+        trattativa.
+      </Premessa>
+
+      {/* Le tre risposte stanno a schermo per tutto il round: sono anche le tre
+          colonne del tabellone, e lì non c'è spazio per la glossa. */}
+      <div className="pannello p-4 grid grid-cols-3 gap-4">
+        {SCENARI.map((s) => (
+          <div key={s} className="flex flex-col gap-1">
+            <span className="etichetta">{SCENARI_GLOSSA[s].etichetta.toLowerCase()}</span>
+            <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+              {SCENARI_GLOSSA[s].aiuto}
+            </span>
+          </div>
+        ))}
+      </div>
 
       {sessione.stato === 'SETUP' && (
         <div className="pannello p-4 flex flex-col gap-3">
-          <span className="etichetta">affermazioni sulla proposition</span>
+          <div className="flex flex-col gap-1">
+            <span className="etichetta">affermazioni sulla proposition</span>
+            <Istruzione>
+              Scrivi le affermazioni su cui il gruppo voterà. Una frase per riga, al presente, come se fosse già
+              pubblicata: «Vendiamo accesso e giudizio, non produzione di documenti».
+            </Istruzione>
+          </div>
 
           {stato.invarianti.length > 0 && (
             <div className="flex flex-col gap-2">
@@ -98,23 +122,34 @@ export function M7Tavolo({ sessione }: { sessione: Sessione }) {
         </div>
       )}
 
-      {sessione.stato === 'COMMIT' && <CommitBar stato={statoCommit} presenti={presenti} nome={nome} />}
+      {sessione.stato === 'COMMIT' && (
+        <>
+          <Istruzione>
+            Ognuno vota dal telefono, per ogni affermazione, se regge in entrambi gli scenari o solo in uno. Le
+            risposte restano coperte finché il round non passa al confronto.
+          </Istruzione>
+          <CommitBar stato={statoCommit} presenti={presenti} nome={nome} />
+        </>
+      )}
 
       {rivelato && (
         <>
           {/* Un tabellone: affermazione a sinistra, conteggi incolonnati a destra. */}
           <div className="pannello">
-            <div
-              className="flex items-baseline gap-3 px-4 pt-4 pb-2"
-              style={{ borderBottom: '1px solid var(--line)' }}
-            >
-              <span className="etichetta flex-1 min-w-0">affermazione</span>
-              {SCENARI.map((s) => (
-                <span key={s.chiave} className={`etichetta ${COL_VOTI}`}>
-                  {s.breve}
-                </span>
-              ))}
-              <span className={`etichetta ${COL_ESITO}`}>esito</span>
+            <div className="px-4 pt-4 pb-3 flex flex-col gap-3" style={{ borderBottom: '1px solid var(--line)' }}>
+              <Istruzione>
+                Ogni colonna conta quante persone hanno scelto quello scenario. L’esito è lo scenario più votato: in
+                caso di parità l’affermazione resta condizionata.
+              </Istruzione>
+              <div className="flex items-baseline gap-3">
+                <span className="etichetta flex-1 min-w-0">affermazione</span>
+                {SCENARI.map((s) => (
+                  <span key={s} className={`etichetta ${COL_VOTI}`}>
+                    {SCENARI_GLOSSA[s].etichetta.toLowerCase()}
+                  </span>
+                ))}
+                <span className={`etichetta ${COL_ESITO}`}>esito</span>
+              </div>
             </div>
 
             <RevealStage
@@ -129,10 +164,10 @@ export function M7Tavolo({ sessione }: { sessione: Sessione }) {
                   <div className="flex items-baseline gap-3">
                     <span className="text-[13px] flex-1 min-w-0">{inv.testo}</span>
                     {SCENARI.map((s) => {
-                      const n = voti.filter((v) => v.scenario === s.chiave).length;
+                      const n = voti.filter((v) => v.scenario === s).length;
                       return (
                         <span
-                          key={s.chiave}
+                          key={s}
                           className={`mono text-[13px] ${COL_VOTI}`}
                           style={{ color: n > 0 ? 'var(--ink)' : 'var(--ink-faint)' }}
                         >
@@ -144,7 +179,7 @@ export function M7Tavolo({ sessione }: { sessione: Sessione }) {
                       className={`etichetta ${COL_ESITO}`}
                       style={{ color: inv.scenario === 'ENTRAMBI' ? 'var(--live)' : 'var(--tension)' }}
                     >
-                      {inv.scenario === 'ENTRAMBI' ? 'invariante' : 'condizionato'}
+                      {inv.scenario === 'ENTRAMBI' ? 'no-regret' : 'condizionata'}
                     </span>
                   </div>
                 );
@@ -154,17 +189,22 @@ export function M7Tavolo({ sessione }: { sessione: Sessione }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="pannello p-4 flex flex-col gap-3" style={{ borderColor: 'var(--live)' }}>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="etichetta" style={{ color: 'var(--live)' }}>
-                  invarianti — si può cominciare da subito
-                </span>
-                <span className="mono text-[13px] shrink-0" style={{ color: 'var(--live)' }}>
-                  {invarianti.length}
-                </span>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="etichetta" style={{ color: 'var(--live)' }}>
+                    no-regret moves
+                  </span>
+                  <span className="mono text-[13px] shrink-0" style={{ color: 'var(--live)' }}>
+                    {invarianti.length}
+                  </span>
+                </div>
+                <Istruzione>
+                  Reggono in tutti e due gli scenari: si possono cominciare adesso, senza aspettare la trattativa.
+                </Istruzione>
               </div>
               {invarianti.length === 0 ? (
                 <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-                  Nessuno.
+                  Nessuna.
                 </span>
               ) : (
                 // Marcatore esplicito: il preflight di Tailwind toglie i
@@ -185,17 +225,22 @@ export function M7Tavolo({ sessione }: { sessione: Sessione }) {
             </div>
 
             <div className="pannello p-4 flex flex-col gap-3" style={{ borderColor: 'var(--tension)' }}>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="etichetta" style={{ color: 'var(--tension)' }}>
-                  condizionati — in sospeso fino all&apos;esito della trattativa
-                </span>
-                <span className="mono text-[13px] shrink-0" style={{ color: 'var(--tension)' }}>
-                  {condizionati.length}
-                </span>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="etichetta" style={{ color: 'var(--tension)' }}>
+                    condizionate
+                  </span>
+                  <span className="mono text-[13px] shrink-0" style={{ color: 'var(--tension)' }}>
+                    {condizionati.length}
+                  </span>
+                </div>
+                <Istruzione>
+                  Reggono in un solo scenario: restano in attesa dell’esito della trattativa sul brand.
+                </Istruzione>
               </div>
               {condizionati.length === 0 ? (
                 <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-                  Nessuno.
+                  Nessuna.
                 </span>
               ) : (
                 <ul className="m-0 p-0 list-none flex flex-col gap-2">
@@ -209,7 +254,7 @@ export function M7Tavolo({ sessione }: { sessione: Sessione }) {
                       <span className="min-w-0">
                         {i.testo}
                         <span className="flex items-baseline gap-2 mt-1">
-                          <span className="etichetta">abilitato da</span>
+                          <span className="etichetta">abilitata da</span>
                           <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
                             {abilitatoDa(i.scenario)}
                           </span>
@@ -255,22 +300,33 @@ export function M7Mano({ sessione }: { sessione: Sessione }) {
 
   if (sessione.stato !== 'COMMIT') {
     return (
-      <CompitoMano titolo="I tuoi voti" sottotitolo="In sola lettura">
+      <CompitoMano
+        titolo="I tuoi voti"
+        sottotitolo="Sola lettura. Per ogni affermazione, lo scenario in cui hai detto che regge."
+      >
         <div className="flex flex-col">
-          {stato.invarianti.map((i, idx) => (
-            <div
-              key={i.id}
-              className="flex flex-col gap-1 py-3"
-              style={
-                idx < stato.invarianti.length - 1 ? { borderBottom: '1px solid var(--line)' } : undefined
-              }
-            >
-              <span className="text-[15px]">{i.testo}</span>
-              <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-                {SCENARI.find((s) => s.chiave === voti[i.id])?.breve ?? '—'}
-              </span>
-            </div>
-          ))}
+          {stato.invarianti.map((i, idx) => {
+            const scelto = voti[i.id];
+            return (
+              <div
+                key={i.id}
+                className="flex flex-col gap-1 py-3"
+                style={
+                  idx < stato.invarianti.length - 1 ? { borderBottom: '1px solid var(--line)' } : undefined
+                }
+              >
+                <span className="text-[15px]">{i.testo}</span>
+                <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                  {scelto ? SCENARI_GLOSSA[scelto].etichetta : '—'}
+                </span>
+                {scelto && (
+                  <span className="text-[13px]" style={{ color: 'var(--ink-faint)' }}>
+                    {SCENARI_GLOSSA[scelto].aiuto}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </CompitoMano>
     );
@@ -279,7 +335,7 @@ export function M7Mano({ sessione }: { sessione: Sessione }) {
   return (
     <CompitoMano
       titolo="Regge in entrambi gli scenari?"
-      sottotitolo="Brand autonomo contro sub-brand"
+      sottotitolo="I due scenari sono brand autonomo e sub-brand con il partner industriale. Scegli per ogni affermazione."
       azione={
         <div className="flex flex-col gap-2">
           <StatoCommitMano confermato={mio?.confermato ?? false} />
@@ -303,25 +359,47 @@ export function M7Mano({ sessione }: { sessione: Sessione }) {
       }
     >
       <div className="flex flex-col gap-5">
-        {stato.invarianti.map((i) => (
-          <div key={i.id} className="flex flex-col gap-2">
-            <span className="text-[15px]">{i.testo}</span>
-            <div className="flex gap-2">
-              {SCENARI.map((s) => (
-                <BottoneTocco
-                  key={s.chiave}
-                  attivo={voti[i.id] === s.chiave}
-                  onClick={() => {
-                    const nuovi = aggiornaVoti((v) => ({ ...v, [i.id]: s.chiave }));
-                    invia('commit.set', { sessioneId: sessione.id, payload: { tipo: 'M7', voti: nuovi } });
-                  }}
-                >
-                  <span className="text-[13px]">{s.breve}</span>
-                </BottoneTocco>
-              ))}
+        {/* Le tre opzioni si spiegano una volta sola, in testa: sotto i bottoni
+            resta la glossa di quella scelta, che è l'unica che serve rileggere. */}
+        <div className="rialzato p-3 flex flex-col gap-2">
+          <span className="etichetta">le tre risposte</span>
+          {SCENARI.map((s) => (
+            <div key={s} className="flex flex-col">
+              <span className="text-[13px]">{SCENARI_GLOSSA[s].etichetta}</span>
+              <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                {SCENARI_GLOSSA[s].aiuto}
+              </span>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {stato.invarianti.map((i) => {
+          const scelto = voti[i.id];
+          return (
+            <div key={i.id} className="flex flex-col gap-2">
+              <span className="text-[15px]">{i.testo}</span>
+              <div className="flex gap-2">
+                {SCENARI.map((s) => (
+                  <BottoneTocco
+                    key={s}
+                    attivo={scelto === s}
+                    onClick={() => {
+                      const nuovi = aggiornaVoti((v) => ({ ...v, [i.id]: s }));
+                      invia('commit.set', { sessioneId: sessione.id, payload: { tipo: 'M7', voti: nuovi } });
+                    }}
+                  >
+                    <span className="text-[13px]">{SCENARI_GLOSSA[s].etichetta}</span>
+                  </BottoneTocco>
+                ))}
+              </div>
+              {scelto && (
+                <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                  {SCENARI_GLOSSA[scelto].aiuto}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </CompitoMano>
   );

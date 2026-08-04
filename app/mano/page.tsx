@@ -18,6 +18,7 @@ import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { Entra } from '@/components/Entra';
 import { FacilitatorPanel } from '@/components/FacilitatorPanel';
 import { FaseMano, nomeFase } from '@/components/FasciaFase';
+import { SpecchioMano } from '@/components/SpecchioMano';
 import { HatBadge } from '@/components/HatBadge';
 import { Monogramma } from '@/components/Logo';
 import { Timer } from '@/components/Timer';
@@ -31,6 +32,7 @@ import { M6Mano } from '@/modules/M6Soglia';
 import { M7Mano } from '@/modules/M7Invarianti';
 import { M8Mano } from '@/modules/M8ActionPlan';
 import { M9Mano } from '@/modules/M9Verbale';
+import { MQMano } from '@/modules/MQQuadro';
 import { AttesaMano } from '@/modules/comune';
 
 export default function Pagina() {
@@ -153,14 +155,22 @@ function VistaModulo() {
 
   if (!sessioneAttiva) return <AttesaMano sessione={null} />;
 
-  // In SETUP si lavora tutti insieme sullo schermo grande: mostrare qui il
-  // modulo mezzo vuoto faceva sembrare un compito interrotto, o peggio un
-  // turno da aspettare. M0 è l'eccezione — lì la Mano serve a presentarsi.
-  if (sessioneAttiva.stato === 'SETUP' && sessioneAttiva.modulo !== 'M0') {
-    return <AttesaMano sessione={sessioneAttiva} />;
+  // Fuori dal proprio turno di risposta il telefono non resta vuoto: mostra il
+  // materiale di cui si sta parlando e lascia mandare un'idea al tavolo.
+  // Prima qui c'era un cartello «aspetta», ed è il modo più rapido per far
+  // smettere di partecipare chi ha uno schermo in mano.
+  // Due eccezioni, ed è la stessa: sono i moduli in cui la Mano è il lavoro,
+  // non l'attesa del proprio turno. In M0 ci si presenta; in MQ si riempie il
+  // quadro, che vive tutto in SETUP perché non ha un momento di risposta in
+  // cieco — si scrive dall'inizio alla fine.
+  const suoLavoroInSetup = sessioneAttiva.modulo === 'M0' || sessioneAttiva.modulo === 'MQ';
+  if (sessioneAttiva.stato === 'SETUP' && !suoLavoroInSetup) {
+    return <SpecchioMano sessione={sessioneAttiva} />;
   }
 
   switch (sessioneAttiva.modulo) {
+    case 'MQ':
+      return <MQMano sessione={sessioneAttiva} />;
     case 'M0':
       return <M0Mano />;
     case 'M1':

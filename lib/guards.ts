@@ -259,6 +259,21 @@ export function verificaAzione(state: Store, pid: string, azione: Action): void 
     }
   }
 
+  // Il quadro è a scrittura libera, ma non a cancellazione libera: le voci
+  // preesistenti (autore `seed`) sono la fotografia di WDA da cui si parte, e
+  // solo il facilitatore le corregge. Sulle proprie voci ognuno fa quello che
+  // vuole; su quelle degli altri, niente. Non è un permesso: è che cancellare
+  // l'idea di un altro mentre la sta scrivendo è il modo più veloce per far
+  // smettere tutti di scrivere.
+  if (azione.type === 'quadro.modifica' || azione.type === 'quadro.rimuovi') {
+    const p = azione.payload as { id: string };
+    const v = state.quadro.find((x) => x.id === p.id);
+    if (!v) throw new ErroreGuardia(404, 'voce inesistente');
+    if (v.autoreId !== pid && !eFacilitatore(state, pid)) {
+      throw new ErroreGuardia(403, 'questa voce l’ha scritta un’altra persona');
+    }
+  }
+
   if (azione.type === 'entity.delete') {
     const p = azione.payload as { tipo: string; id: string };
     if (p.tipo === 'competitor') {

@@ -11,7 +11,8 @@
 import { QUOTA_MASSIMA_OWNER, controlliM8 } from '@/lib/calc';
 import { proposteAzioni } from '@/lib/handlers';
 import type { Azione, Orizzonte, Sessione } from '@/lib/types';
-import { CompitoMano, Intestazione, Vuoto } from '../comune';
+import { CompitoMano, Istruzione, Vuoto } from '../comune';
+import { TestataModulo } from '@/components/TestataModulo';
 import { useStore } from '@/net/useStore';
 
 const SCADENZA_90 = '2026-10-31';
@@ -33,21 +34,28 @@ export function M8Tavolo({ sessione }: { sessione: Sessione }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Intestazione
+      <TestataModulo
         modulo="M8"
-        titolo="L'action plan"
-        sottotitolo="Un solo owner per azione. Mai «tutti», mai «il team»."
         destra={
-          <div className="text-right">
-            <div className="etichetta">azioni</div>
+          <div className="text-right shrink-0" style={{ maxWidth: '16rem' }}>
+            <div className="etichetta">azioni nel piano</div>
             <div className="mono text-[28px] leading-none mt-1">{stato.azioni.length}</div>
+            <div className="text-[13px] mt-1" style={{ color: 'var(--ink-dim)' }}>
+              Righe del piano, comprese quelle ancora senza owner o senza data.
+            </div>
           </div>
         }
       />
 
       {proposte.length > 0 && (
         <div className="pannello p-4">
-          <div className="etichetta mb-3">proposte dalle decisioni bloccate</div>
+          <div className="flex flex-col gap-1 mb-3">
+            <div className="etichetta">proposte dalle decisioni chiuse</div>
+            <Istruzione>
+              Ogni decisione chiusa nei moduli precedenti propone la propria azione. Accetta per portarla nel piano,
+              poi correggi testo, owner e data nella tabella qui sotto.
+            </Istruzione>
+          </div>
           <div className="flex flex-col gap-2">
             {proposte.map((p) => (
               <div key={p.lockId} className="flex items-center gap-3">
@@ -76,6 +84,10 @@ export function M8Tavolo({ sessione }: { sessione: Sessione }) {
       )}
 
       <div className="pannello p-4 flex flex-col gap-2">
+        <Istruzione>
+          Un’azione per riga, con un solo owner: mai «tutti», mai «il team». L’orizzonte è novanta giorni oppure
+          gennaio 2027, e imposta la scadenza. La colonna origine dice da quale decisione nasce l’azione.
+        </Istruzione>
         <div className={`${COLONNE} pb-2`} style={{ borderBottom: '1px solid var(--line)' }}>
           <span className="etichetta">azione — verbo all&apos;infinito</span>
           <span className="etichetta">owner</span>
@@ -88,7 +100,7 @@ export function M8Tavolo({ sessione }: { sessione: Sessione }) {
         ))}
         {stato.azioni.length === 0 && (
           <span className="text-[13px] py-1" style={{ color: 'var(--ink-dim)' }}>
-            Nessuna azione.
+            Nessuna azione nel piano.
           </span>
         )}
         <button
@@ -111,7 +123,14 @@ export function M8Tavolo({ sessione }: { sessione: Sessione }) {
       {/* Controlli obbligatori prima della chiusura */}
       <div className="grid grid-cols-2 gap-4 items-start">
         <div className="pannello p-4">
-          <div className="etichetta mb-3">distribuzione per owner</div>
+          <div className="flex flex-col gap-1 mb-3">
+            <div className="etichetta">distribuzione per owner</div>
+            <Istruzione>
+              Quante azioni ha in carico ogni persona e che quota del piano rappresentano. La barra cambia colore
+              oltre il <span className="mono">{QUOTA_MASSIMA_OWNER * 100}%</span>: da lì in su il piano dipende da una
+              persona sola.
+            </Istruzione>
+          </div>
           {controlli.perOwner.length === 0 && (
             <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
               Nessuna azione assegnata.
@@ -160,7 +179,13 @@ export function M8Tavolo({ sessione }: { sessione: Sessione }) {
         </div>
 
         <div className="pannello p-4 flex flex-col">
-          <div className="etichetta mb-3">controlli di chiusura</div>
+          <div className="flex flex-col gap-1 mb-3">
+            <div className="etichetta">controlli di chiusura</div>
+            <Istruzione>
+              Il piano si chiude quando contiene almeno un’azione e le prime due righe sono a zero. La terza non
+              blocca la chiusura: segnala le decisioni che nessuno ha ancora tradotto in un’azione.
+            </Istruzione>
+          </div>
           <div className="flex flex-col gap-2">
             <Controllo
               ok={controlli.senzaOwner.length === 0}
@@ -175,7 +200,7 @@ export function M8Tavolo({ sessione }: { sessione: Sessione }) {
             <Controllo
               ok={controlli.lockSenzaAzione.length === 0}
               conteggio={controlli.lockSenzaAzione.length}
-              testo="Decisioni senza esecuzione"
+              testo="Decisioni chiuse senza un’azione"
               avviso
             />
           </div>
@@ -190,7 +215,7 @@ export function M8Tavolo({ sessione }: { sessione: Sessione }) {
               })
             }
           >
-            {sessione.stato === 'LOCKED' ? 'Chiuso' : 'Chiudi M8'}
+            {sessione.stato === 'LOCKED' ? 'Piano chiuso' : 'Chiudi il piano'}
           </button>
         </div>
       </div>
@@ -305,9 +330,16 @@ export function M8Mano() {
   const mie = stato.azioni.filter((a) => a.ownerId === io?.id);
 
   return (
-    <CompitoMano titolo="Le tue azioni" sottotitolo={io ? nome(io.id) : undefined}>
+    <CompitoMano
+      titolo="Le tue azioni"
+      sottotitolo={
+        io
+          ? `${nome(io.id)} — le azioni del piano di cui sei owner, con la data entro cui vanno chiuse.`
+          : 'Le azioni del piano di cui sei owner, con la data entro cui vanno chiuse.'
+      }
+    >
       {mie.length === 0 ? (
-        <Vuoto>Nessuna azione a tuo nome.</Vuoto>
+        <Vuoto>Nessuna azione a tuo nome. Le assegnazioni si fanno sul tavolo.</Vuoto>
       ) : (
         <div className="flex flex-col gap-2">
           {mie.map((a) => (

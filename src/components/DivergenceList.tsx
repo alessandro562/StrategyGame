@@ -4,17 +4,38 @@
  * La divergenza è il dato, non un torto. Si riporta, non si commenta.
  */
 
+import type { ReactNode } from 'react';
+import { TERMINI } from '@/lib/glossario';
+
 export interface Divergenza {
   etichetta: string;
-  dettaglio: string;
+  /**
+   * `ReactNode` e non `string`: il dettaglio contiene cifre e nomi insieme
+   * («3 AI / 2 Umano»), e con una stringa unica finiva tutto in monospaziato,
+   * nomi delle destinazioni compresi. Chi chiama marca le cifre in `.mono` e
+   * lascia le parole nel carattere di interfaccia.
+   */
+  dettaglio: ReactNode;
   intensita: number; // 0-1
+}
+
+/** Il titolo del pannello non era mai glossato: «divergenza» ora sta in TERMINI. */
+function Titolo() {
+  return (
+    <>
+      <div className="etichetta mb-1">divergenze</div>
+      <p className="text-[13px] m-0 mb-3" style={{ color: 'var(--ink-dim)' }}>
+        {TERMINI.divergenza}
+      </p>
+    </>
+  );
 }
 
 export function DivergenceList({ voci }: { voci: Divergenza[] }) {
   if (voci.length === 0) {
     return (
       <div className="pannello p-4">
-        <div className="etichetta mb-3">divergenze</div>
+        <Titolo />
         <p className="text-[13px] m-0" style={{ color: 'var(--ink-dim)' }}>
           Nessuna divergenza registrata.
         </p>
@@ -26,7 +47,7 @@ export function DivergenceList({ voci }: { voci: Divergenza[] }) {
 
   return (
     <div className="pannello p-4">
-      <div className="etichetta mb-3">divergenze</div>
+      <Titolo />
       {/* Impilate, non in riga. Questo pannello vive in una colonna stretta
           accanto al residuo: con nome, barra e conteggi sulla stessa riga il
           nome andava a capo e finiva sotto i numeri, sovrapposto. Il nome ha
@@ -46,10 +67,7 @@ export function DivergenceList({ voci }: { voci: Divergenza[] }) {
               >
                 <div className="h-full" style={{ width: `${v.intensita * 100}%`, background: 'var(--tension)' }} />
               </div>
-              <span
-                className="mono text-[13px] whitespace-nowrap"
-                style={{ color: 'var(--ink-dim)' }}
-              >
+              <span className="text-[13px] whitespace-nowrap" style={{ color: 'var(--ink-dim)' }}>
                 {v.dettaglio}
               </span>
             </div>

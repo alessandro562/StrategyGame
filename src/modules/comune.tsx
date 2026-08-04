@@ -7,6 +7,7 @@
 
 import type { ReactNode } from 'react';
 import type { Sessione } from '@/lib/types';
+import { MODULI } from '@/lib/glossario';
 
 export function Intestazione({
   modulo,
@@ -41,6 +42,22 @@ export function Intestazione({
       </div>
       {destra}
     </div>
+  );
+}
+
+/**
+ * «Cosa fare adesso», sotto il titolo di una sezione. Stava duplicata identica
+ * in sette moduli: la riga di istruzione è un elemento di lingua, e la lingua
+ * sta in un posto solo. `centrata` serve ai pannelli a colonna centrata (M5).
+ */
+export function Istruzione({ children, centrata }: { children: ReactNode; centrata?: boolean }) {
+  return (
+    <p
+      className={`m-0 text-[13px] max-w-[42rem] ${centrata ? 'text-center' : ''}`}
+      style={{ color: 'var(--ink-dim)' }}
+    >
+      {children}
+    </p>
   );
 }
 
@@ -139,8 +156,20 @@ export function AttesaMano({ sessione }: { sessione: Sessione | null }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6">
       <span className="etichetta">{sessione ? 'si lavora insieme' : 'in attesa'}</span>
+      {/* Il nome del modulo viene dal glossario, non da `sessione.titolo`: il
+          titolo è quello che ha scritto chi facilita, e sul telefono si leggeva
+          una lingua diversa da quella dello schermo grande. */}
       <p className="m-0 text-[17px] text-center max-w-[32rem]" style={{ color: 'var(--ink)' }}>
-        {sessione ? `${sessione.modulo} — ${sessione.titolo}` : 'Nessun round aperto'}
+        {sessione ? (
+          <>
+            <span className="mono" style={{ color: 'var(--wda-bright)' }}>
+              {sessione.modulo}
+            </span>{' '}
+            — {MODULI[sessione.modulo]?.nome ?? sessione.titolo}
+          </>
+        ) : (
+          'Nessun round aperto'
+        )}
       </p>
       <p className="m-0 text-[15px] text-center max-w-[32rem]" style={{ color: 'var(--ink-dim)' }}>
         {sessione
@@ -151,10 +180,16 @@ export function AttesaMano({ sessione }: { sessione: Sessione | null }) {
   );
 }
 
+/**
+ * Stava direttamente sopra ogni bottone di conferma della Mano, ed era l'ultimo
+ * posto in cui restava «commit», il gergo che il glossario traduce con
+ * «risposta in cieco». Compare su tutte le viste Mano: si riscrive qui una
+ * volta per tutti i moduli.
+ */
 export function StatoCommitMano({ confermato }: { confermato: boolean }) {
   return (
     <span className="etichetta" style={{ color: confermato ? 'var(--live)' : 'var(--tension)' }}>
-      {confermato ? 'commit confermato' : 'commit non confermato'}
+      {confermato ? 'risposta inviata' : 'risposta non inviata'}
     </span>
   );
 }
