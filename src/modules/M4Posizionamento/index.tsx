@@ -11,12 +11,12 @@
  * medie e non punteggi.
  */
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { SOGLIA_DIVERGENZA_OGGI, vettoreStrategia } from '@/lib/calc';
 import { FASI, MODULI, TERMINI } from '@/lib/glossario';
 import { ASSI_PROPOSTI } from '@/lib/seed';
 import type { Sessione } from '@/lib/types';
-import { CompitoMano, StatoCommitMano } from '../comune';
+import { CompitoMano, Istruzione, StatoCommitMano } from '../comune';
 import { TestataModulo } from '@/components/TestataModulo';
 import { CommitBar } from '@/components/CommitBar';
 import { LockButton } from '@/components/LockButton';
@@ -36,15 +36,6 @@ const POLO = {
   ySotto: 'polo in basso',
   ySopra: 'polo in alto',
 } as const;
-
-/** Riga di istruzione: cosa si deve fare adesso, senza incoraggiamenti. */
-function Istruzione({ children }: { children: ReactNode }) {
-  return (
-    <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-      {children}
-    </p>
-  );
-}
 
 export function M4Tavolo({ sessione }: { sessione: Sessione }) {
   const ctx = useStore();

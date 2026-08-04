@@ -18,6 +18,7 @@ import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { Entra } from '@/components/Entra';
 import { FacilitatorPanel } from '@/components/FacilitatorPanel';
 import { FaseMano, nomeFase } from '@/components/FasciaFase';
+import { SpecchioMano } from '@/components/SpecchioMano';
 import { HatBadge } from '@/components/HatBadge';
 import { Monogramma } from '@/components/Logo';
 import { Timer } from '@/components/Timer';
@@ -153,11 +154,13 @@ function VistaModulo() {
 
   if (!sessioneAttiva) return <AttesaMano sessione={null} />;
 
-  // In SETUP si lavora tutti insieme sullo schermo grande: mostrare qui il
-  // modulo mezzo vuoto faceva sembrare un compito interrotto, o peggio un
-  // turno da aspettare. M0 è l'eccezione — lì la Mano serve a presentarsi.
+  // Fuori dal proprio turno di risposta il telefono non resta vuoto: mostra il
+  // materiale di cui si sta parlando e lascia mandare un'idea al tavolo.
+  // Prima qui c'era un cartello «aspetta», ed è il modo più rapido per far
+  // smettere di partecipare chi ha uno schermo in mano.
+  // M0 è l'eccezione: lì la Mano serve a presentarsi.
   if (sessioneAttiva.stato === 'SETUP' && sessioneAttiva.modulo !== 'M0') {
-    return <AttesaMano sessione={sessioneAttiva} />;
+    return <SpecchioMano sessione={sessioneAttiva} />;
   }
 
   switch (sessioneAttiva.modulo) {

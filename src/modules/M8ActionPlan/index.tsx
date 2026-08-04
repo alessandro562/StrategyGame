@@ -8,22 +8,12 @@
  * che il team accetta, modifica o scarta.
  */
 
-import type { ReactNode } from 'react';
 import { QUOTA_MASSIMA_OWNER, controlliM8 } from '@/lib/calc';
 import { proposteAzioni } from '@/lib/handlers';
 import type { Azione, Orizzonte, Sessione } from '@/lib/types';
-import { CompitoMano, Vuoto } from '../comune';
+import { CompitoMano, Istruzione, Vuoto } from '../comune';
 import { TestataModulo } from '@/components/TestataModulo';
 import { useStore } from '@/net/useStore';
-
-/** Una riga asciutta che dice cosa si fa adesso, senza incoraggiamenti. */
-function Istruzione({ children }: { children: ReactNode }) {
-  return (
-    <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-      {children}
-    </p>
-  );
-}
 
 const SCADENZA_90 = '2026-10-31';
 const SCADENZA_GEN = '2027-01-31';

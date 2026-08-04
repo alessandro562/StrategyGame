@@ -48,8 +48,16 @@ export function LockButton({
 
   return (
     <div className="pannello p-4 flex flex-col gap-4" style={{ borderColor: 'var(--locked)' }}>
-      <div className="etichetta" style={{ color: 'var(--locked)' }}>
-        blocco della decisione
+      <div>
+        <div className="etichetta" style={{ color: 'var(--locked)' }}>
+          blocco della decisione
+        </div>
+        {/* Cosa comporta il lock non era scritto da nessuna parte, e vale per
+            tutti i moduli: la decisione si registra, il dissenso non si perde. */}
+        <p className="m-0 mt-1 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+          La decisione viene registrata e il round si chiude. Chi non era d’accordo resta a verbale con la
+          sua nota: bloccare non cancella il dissenso. Si può riaprire dal pannello del facilitatore.
+        </p>
       </div>
 
       <div>

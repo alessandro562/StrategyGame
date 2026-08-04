@@ -17,6 +17,7 @@ import {
   storicoCappelli,
   vettoreStrategia,
 } from './calc';
+import { BASI_GLOSSA, BUCKET_GLOSSA, MODULI, VINCOLI } from './glossario';
 import type { Commit, Store } from './types';
 
 function data(ts: number): string {
@@ -78,14 +79,12 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   w('## 2. Il catalogo nei tre bucket');
   w('');
   const bucket = (b: string) => state.servizi.filter((s) => s.bucket === b);
-  const etichette: Record<string, string> = {
-    NUCLEO: 'Nucleo — stesso prezzo, un decimo del lavoro',
-    PORTA: 'Porta — in commoditizzazione, si tiene solo se apre relazioni',
-    CHIUSO: 'Chiuso — il servizio muore',
-  };
+  // Etichetta e glossa dal glossario: erano riscritte a mano qui, e dicevano
+  // «Porta» e «Chiuso» mentre lo schermo diceva «Apriporta» e «Da dismettere».
   for (const b of ['NUCLEO', 'PORTA', 'CHIUSO'] as const) {
     const servizi = bucket(b);
-    w(`### ${etichette[b]}`);
+    const g = BUCKET_GLOSSA[b];
+    w(`### ${g.etichetta} (${g.standard}) — ${g.aiuto}`);
     w('');
     if (servizi.length === 0) {
       w('_Nessun servizio._');
@@ -119,12 +118,15 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   if (conBase.length === 0) {
     w('Nessun servizio in catalogo.');
   } else {
-    w('| Servizio | Base primaria | Base secondaria | Nota |');
+    // Etichette dal glossario, non l'enum grezzo: il verbale stampava
+    // «ACCESSO» dove lo schermo dice «Accesso (retainer)».
+    const base = (b: keyof typeof BASI_GLOSSA) => `${BASI_GLOSSA[b].etichetta} (${BASI_GLOSSA[b].standard})`;
+    w('| Servizio | Base principale | Seconda base | Nota |');
     w('|---|---|---|---|');
     for (const s of conBase) {
       const b = s.basePrezzo;
-      const primaria = b ? b.primaria : 'GIORNATA — erosione attesa';
-      w(`| ${s.nome} | ${primaria} | ${b?.secondaria ?? '—'} | ${b?.nota ?? '—'} |`);
+      const principale = b ? base(b.primaria) : `${base('GIORNATA')} — erosione attesa`;
+      w(`| ${s.nome} | ${principale} | ${b?.secondaria ? base(b.secondaria) : '—'} | ${b?.nota ?? '—'} |`);
     }
   }
   w('');
@@ -184,8 +186,8 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   }
   w('');
 
-  /* 8. Soglia e forbice ---------------------------------------------- */
-  w('## 7. La soglia di sostenibilità');
+  /* 8. Soglia e spread ------------------------------------------------ */
+  w(`## 7. ${MODULI.M6.nome}`);
   w('');
   const f = forbice(state.soglie);
   w(
@@ -193,7 +195,7 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
   );
   w('');
   if (f.min !== null && f.max !== null) {
-    w(`Forbice originale: da ${num(f.min)}% a ${num(f.max)}% — **${num(f.ampiezza)} punti**.`);
+    w(`Spread registrato all'apertura: da ${num(f.min)}% a ${num(f.max)}% — **${num(f.ampiezza)} punti**.`);
     w('');
     w('Trigger di allarme raccolti (in ordine mescolato, non attribuiti):');
     w('');
@@ -211,16 +213,22 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
       w(`| ${t.etichetta} | ${num(t.quotaServiziPct)}% | ${t.consumo.R} | ${t.consumo.G} | ${t.consumo.B} |`);
     }
     w('');
+    // Senza legenda le tre colonne sono tre lettere: chi legge il verbale non
+    // era in stanza quando si sono compilate in M0.
+    w(`Consumo per trimestre delle tre risorse scarse: ${VINCOLI.map((v) => `**${v.chiave}** ${v.nome.toLowerCase()}`).join(', ')}.`);
+    w('');
   }
 
-  /* 9. Invarianti ---------------------------------------------------- */
-  w('## 8. Invarianti');
+  /* 9. No-regret moves ------------------------------------------------ */
+  // `state.invarianti` resta il nome nel modello dati; a schermo e sul verbale
+  // le due liste si chiamano «no-regret moves» e «condizionate».
+  w(`## 8. ${MODULI.M7.nome}`);
   w('');
   const invarianti = state.invarianti.filter((i) => i.scenario === 'ENTRAMBI');
-  if (invarianti.length === 0) w('_Nessun invariante._');
+  if (invarianti.length === 0) w('_Nessuna no-regret move._');
   for (const i of invarianti) w(`- ${i.testo}`);
   w('');
-  w('## 9. Condizionati');
+  w('## 9. Condizionate');
   w('');
   const condizionati = state.invarianti.filter((i) => i.scenario !== 'ENTRAMBI');
   if (condizionati.length === 0) w('_Nessuna affermazione condizionata._');

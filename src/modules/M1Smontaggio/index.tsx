@@ -18,12 +18,20 @@
  * Il residuo resta l'unico numero grande della schermata.
  */
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { esitiServizio, type EsitoAttivita } from '@/lib/calc';
 import { BUCKET_GLOSSA, DESTINAZIONI_GLOSSA, TERMINI } from '@/lib/glossario';
 import { SCOMPOSIZIONI_SUGGERITE } from '@/lib/seed';
 import type { Bucket, Destinazione, Servizio, Sessione } from '@/lib/types';
-import { BottoneTocco, COLORE_DESTINAZIONE, CompitoMano, Premessa, StatoCommitMano, Vuoto } from '../comune';
+import {
+  BottoneTocco,
+  COLORE_DESTINAZIONE,
+  CompitoMano,
+  Istruzione,
+  Premessa,
+  StatoCommitMano,
+  Vuoto,
+} from '../comune';
 import { CommitBar } from '@/components/CommitBar';
 import { DivergenceList } from '@/components/DivergenceList';
 import { LockButton } from '@/components/LockButton';
@@ -46,14 +54,12 @@ function etichettaBucket(b: Bucket | null): string {
   return `${BUCKET_GLOSSA[b].etichetta} (${BUCKET_GLOSSA[b].standard})`;
 }
 
-/** Conteggi dei voti scritti con i nomi delle destinazioni, non con gli enum. */
-function dettaglioVoti(conteggi: Record<Destinazione, number>): string {
-  return DESTINAZIONI.filter((d) => conteggi[d] > 0)
-    .map((d) => `${conteggi[d]} ${DESTINAZIONI_GLOSSA[d].etichetta}`)
-    .join(' / ');
-}
-
-/** Come sopra, ma a schermo: le cifre in mono, i nomi nel carattere di interfaccia. */
+/**
+ * Conteggi dei voti con i nomi delle destinazioni, non con gli enum: le cifre
+ * in mono, i nomi nel carattere di interfaccia. Era duplicato in due versioni,
+ * una stringa e una JSX, perché `DivergenceList` accettava solo `string`;
+ * adesso accetta `ReactNode` e ne basta una.
+ */
 function DettaglioVoti({ conteggi }: { conteggi: Record<Destinazione, number> }) {
   const voci = DESTINAZIONI.filter((d) => conteggi[d] > 0);
   return (
@@ -65,15 +71,6 @@ function DettaglioVoti({ conteggi }: { conteggi: Record<Destinazione, number> })
         </span>
       ))}
     </>
-  );
-}
-
-/** Una riga asciutta che dice cosa si fa adesso, sopra il compito. */
-function Istruzione({ children }: { children: ReactNode }) {
-  return (
-    <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-      {children}
-    </p>
   );
 }
 
@@ -201,7 +198,7 @@ export function M1Tavolo({ sessione }: { sessione: Sessione }) {
                 .filter((e) => e.divergente)
                 .map((e) => ({
                   etichetta: e.nome,
-                  dettaglio: dettaglioVoti(e.conteggi),
+                  dettaglio: <DettaglioVoti conteggi={e.conteggi} />,
                   intensita:
                     e.votanti > 0 ? 1 - Math.max(...DESTINAZIONI.map((d) => e.conteggi[d])) / e.votanti : 0,
                 }))}

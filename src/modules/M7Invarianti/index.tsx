@@ -11,25 +11,15 @@
  */
 
 import { useState } from 'react';
-import type { ReactNode } from 'react';
 import { SCENARI_GLOSSA } from '@/lib/glossario';
 import type { Scenario, Sessione } from '@/lib/types';
-import { BottoneTocco, CompitoMano, Premessa, StatoCommitMano } from '../comune';
+import { BottoneTocco, CompitoMano, Istruzione, Premessa, StatoCommitMano } from '../comune';
 import { CommitBar } from '@/components/CommitBar';
 import { LockButton } from '@/components/LockButton';
 import { RevealStage, useRevealPartito } from '@/components/RevealStage';
 import { TestataModulo } from '@/components/TestataModulo';
 import { useBozzaCommit } from '@/net/useBozza';
 import { useStore } from '@/net/useStore';
-
-/** Una riga asciutta che dice cosa si fa adesso, senza incoraggiamenti. */
-function Istruzione({ children }: { children: ReactNode }) {
-  return (
-    <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-      {children}
-    </p>
-  );
-}
 
 /** L'ordine in cui i tre scenari compaiono ovunque. Le etichette dal glossario. */
 const SCENARI: Scenario[] = ['ENTRAMBI', 'AUTONOMO', 'SUB_BRAND'];

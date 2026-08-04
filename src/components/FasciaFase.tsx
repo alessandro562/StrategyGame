@@ -14,9 +14,9 @@
  */
 
 import type { Sessione, StatoSessione } from '@/lib/types';
+import { FASI } from '@/lib/glossario';
 
 interface Testo {
-  fase: string;
   tavolo: string;
   mano: string;
   colore: string;
@@ -30,37 +30,38 @@ interface Testo {
   modo: 'insieme' | 'ognuno';
 }
 
+/**
+ * Il nome della fase non si scrive qui: viene da `FASI`. Questa fascia diceva
+ * «commit cieco», «reveal», «bloccato» mentre il resto dello schermo, dopo il
+ * passaggio al glossario, diceva «risposta in cieco», «confronto», «deciso».
+ * Era la contraddizione più visibile del prodotto, su entrambe le viste.
+ */
 const TESTI: Record<StatoSessione, Testo> = {
   SETUP: {
-    fase: 'preparazione',
     tavolo: 'Tutti insieme, a voce. Si prepara il round guardando questo schermo.',
     mano: 'Si lavora tutti insieme sullo schermo grande. Qui non serve fare nulla.',
     colore: 'var(--ink-faint)',
     modo: 'insieme',
   },
   COMMIT: {
-    fase: 'commit cieco',
     tavolo: 'Ognuno per sé, tutti nello stesso momento. Nessuno vede le risposte degli altri, nemmeno questo schermo.',
-    mano: 'Tocca a te, adesso. Rispondi quando vuoi: nessuno aspetta il tuo turno e nessuno vede finché non si rivela.',
+    mano: 'Tocca a te, adesso. Rispondi quando vuoi: nessuno aspetta il tuo turno e nessuno vede le risposte finché il round non passa al confronto.',
     colore: 'var(--live)',
     modo: 'ognuno',
   },
   REVEAL: {
-    fase: 'reveal',
     tavolo: 'Tutte le posizioni insieme, nello stesso istante.',
     mano: 'Si guarda insieme sullo schermo grande. La tua risposta non si può più cambiare.',
     colore: 'var(--wda-bright)',
     modo: 'insieme',
   },
   DISCUSSIONE: {
-    fase: 'discussione',
     tavolo: 'Tutti insieme. Si negozia, e le divergenze restano registrate.',
-    mano: 'Si discute insieme. Hai cambiato idea? Si annota, non si riscrive il commit.',
+    mano: 'Si discute insieme. Se hai cambiato idea si annota, non si riscrive la risposta.',
     colore: 'var(--tension)',
     modo: 'insieme',
   },
   LOCKED: {
-    fase: 'bloccato',
     tavolo: 'Decisione registrata, dissensi compresi.',
     mano: 'Deciso. Si passa oltre.',
     colore: 'var(--locked)',
@@ -72,12 +73,11 @@ const TESTI: Record<StatoSessione, Testo> = {
  * Il nome leggibile della fase. Esportato perché la barra del Tavolo e il
  * piede della Mano mostravano la chiave grezza dell'enum (`COMMIT`,
  * `DISCUSSIONE`) mentre questa fascia, sullo stesso schermo e a pochi
- * centimetri di distanza, mostrava lo stesso dato tradotto («commit cieco»,
- * «discussione»). Due nomi per la stessa cosa: la mappa sta qui, e adesso la
- * leggono tutti.
+ * centimetri di distanza, mostrava lo stesso dato tradotto. Due nomi per la
+ * stessa cosa: adesso entrambi leggono `FASI` dal glossario.
  */
 export function nomeFase(stato: StatoSessione): string {
-  return TESTI[stato].fase;
+  return FASI[stato].nome.toLowerCase();
 }
 
 export function FasciaFase({
@@ -115,7 +115,7 @@ export function FasciaFase({
       style={{ borderLeft: `3px solid ${t.colore}` }}
     >
       <span className="mono text-[13px] shrink-0" style={{ color: t.colore, letterSpacing: '0.08em' }}>
-        {sessione.modulo} · {t.fase.toUpperCase()}
+        {sessione.modulo} · {FASI[sessione.stato].nome.toUpperCase()}
       </span>
       <EtichettaModo modo={t.modo} />
       <span className="text-[15px] flex-1 min-w-[200px]" style={{ color: 'var(--ink)' }}>

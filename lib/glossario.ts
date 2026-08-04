@@ -19,6 +19,7 @@
  * non commenta i risultati.
  */
 
+import type { DiagnosiPosizione } from './calc';
 import type { BasePrezzo, Bucket, Destinazione, Modulo, Scenario, StatoSessione } from './types';
 
 export interface VoceModulo {
@@ -149,6 +150,43 @@ export const FASI: Record<StatoSessione, { nome: string; verbo: string }> = {
 };
 
 /* ------------------------------------------------------------------ */
+/* M0 — le tre risorse scarse, che ricompaiono in M6 e M8              */
+/* ------------------------------------------------------------------ */
+
+export type ChiaveVincolo = 'R' | 'G' | 'B';
+
+/**
+ * Le sigle R/G/B restano: `lib/verbale.ts` le stampa come intestazioni di
+ * colonna, e devono restare corte. I nomi invece stanno qui e non dentro M0,
+ * perché il verbale che il cliente si porta via deve scioglierle con le stesse
+ * parole che si sono lette a schermo — altrimenti la tabella dei trimestri è
+ * tre lettere senza legenda.
+ */
+export const VINCOLI: { chiave: ChiaveVincolo; nome: string; descrizione: string; unita: string }[] = [
+  {
+    chiave: 'R',
+    nome: 'Relazioni di fiducia',
+    descrizione:
+      'Quanti clienti o partner riusciamo a seguire davvero nello stesso periodo, prima che la relazione si degradi.',
+    unita: 'relazioni in parallelo',
+  },
+  {
+    chiave: 'G',
+    nome: 'Decisioni con la nostra firma',
+    descrizione:
+      'Quante volte al mese qualcuno del team può mettere la faccia su una scelta: approvare, garantire, esporsi.',
+    unita: 'al mese',
+  },
+  {
+    chiave: 'B',
+    nome: 'Trattative aperte',
+    descrizione:
+      'Quante conversazioni di vendita vere possiamo tenere aperte insieme, dal primo contatto alla firma.',
+    unita: 'in parallelo',
+  },
+];
+
+/* ------------------------------------------------------------------ */
 /* M1 — dove finisce ogni attività                                     */
 /* ------------------------------------------------------------------ */
 
@@ -218,6 +256,30 @@ export const BASI_GLOSSA: Record<BasePrezzo, { etichetta: string; standard: stri
 };
 
 /* ------------------------------------------------------------------ */
+/* M3 — cosa dice il numero di flussi distinti                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Le tre diagnosi con la soglia che le produce e cosa vogliono dire.
+ * Le soglie sono quelle di `diagnosiPosizione()`, riportate qui solo per
+ * leggerle: la classificazione resta in lib/calc.
+ */
+export const DIAGNOSI_GLOSSA: Record<DiagnosiPosizione, { soglia: string; aiuto: string }> = {
+  'Intermediario sostituibile': {
+    soglia: '0–1',
+    aiuto: 'Chi sta ai due capi può parlarsi direttamente. Togliere WDA di mezzo non rompe niente.',
+  },
+  'Layer parziale': {
+    soglia: '2–3',
+    aiuto: 'Presidiamo qualche collegamento, non l’ecosistema. Sostituibili, ma con fatica.',
+  },
+  Infrastruttura: {
+    soglia: '4+',
+    aiuto: 'L’ecosistema passa da qui: senza WDA i collegamenti vanno ricostruiti uno per uno.',
+  },
+};
+
+/* ------------------------------------------------------------------ */
 /* M7 — scenari di brand                                               */
 /* ------------------------------------------------------------------ */
 
@@ -247,9 +309,12 @@ export const TERMINI: Record<string, string> = {
   'flussi distinti': 'Quante relazioni diverse fra due attori passano da noi. Contate una volta sola.',
   vettore: 'La freccia fra dove il gruppo si colloca oggi e dove si vede fra dodici mesi.',
   allineamento: 'Quanto le risposte individuali coincidono. Non è un voto: al primo round dovrebbe essere basso.',
+  divergenza: 'Dove le risposte non coincidono. Si riporta e resta a verbale: non è un torto di nessuno.',
   copertura: 'Quante decisioni sono state chiuse sulle nove previste.',
   esposizione: 'Quanta parte del fatturato poggia su basi di prezzo in erosione.',
   vulnerabilità: 'Una domanda del mercato a cui non abbiamo ancora una risposta convincente.',
+  'no-regret': 'Una mossa che conviene in entrambi gli scenari di brand. Non serve aspettare la trattativa per cominciarla.',
+  dispersione: 'Quanto sono lontani fra loro i punti del gruppo, in centesimi del lato della mappa.',
 };
 
 /** L'arco completo, nell'ordine in cui si affronta. */

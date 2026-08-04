@@ -538,7 +538,7 @@ function testoProposta(state: Store, modulo: string, titolo: string): string {
     case 'M6':
       return `Impostare il monitoraggio mensile della soglia (${state.workshop.sogliaCondivisaPct ?? '—'}%)`;
     case 'M7':
-      return `Portare l'invariante "${titolo}" in una pagina pubblica`;
+      return `Portare la no-regret move "${titolo}" in una pagina pubblica`;
     default:
       return `Dare seguito a: ${titolo}`;
   }

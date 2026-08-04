@@ -17,19 +17,26 @@
 
 import { useEffect, useState } from 'react';
 import type { Contesto } from '@/net/useStore';
+import { FASI, MODULI } from '@/lib/glossario';
 import type { Modulo, StatoSessione } from '@/lib/types';
 
-const MODULI: { modulo: Modulo; titolo: string; durataS?: number; anonimo?: boolean }[] = [
-  { modulo: 'M0', titolo: 'Setup' },
-  { modulo: 'M1', titolo: 'Lo smontaggio', durataS: 240 },
-  { modulo: 'M2', titolo: 'Il ripricing', durataS: 180 },
-  { modulo: 'M3', titolo: 'La mappa dei flussi', durataS: 240 },
-  { modulo: 'M4', titolo: 'Il posizionamento', durataS: 180 },
-  { modulo: 'M5', titolo: 'Le carte avversarie', durataS: 90 },
-  { modulo: 'M6', titolo: 'La soglia di sostenibilità', durataS: 240, anonimo: true },
-  { modulo: 'M7', titolo: 'Gli invarianti', durataS: 180 },
-  { modulo: 'M8', titolo: "L'action plan" },
-  { modulo: 'M9', titolo: 'Il verbale' },
+/**
+ * Durate e anonimato per modulo. Il TITOLO non sta qui: viene dal glossario,
+ * altrimenti la stessa cosa avrebbe due nomi e quello vecchio finirebbe
+ * salvato dentro le sessioni — che è esattamente com'è successo, con «Lo
+ * smontaggio» rimasto a schermo dopo la rinomina.
+ */
+const CONFIG_MODULI: { modulo: Modulo; durataS?: number; anonimo?: boolean }[] = [
+  { modulo: 'M0' },
+  { modulo: 'M1', durataS: 240 },
+  { modulo: 'M2', durataS: 180 },
+  { modulo: 'M3', durataS: 240 },
+  { modulo: 'M4', durataS: 180 },
+  { modulo: 'M5', durataS: 90 },
+  { modulo: 'M6', durataS: 240, anonimo: true },
+  { modulo: 'M7', durataS: 180 },
+  { modulo: 'M8' },
+  { modulo: 'M9' },
 ];
 
 const STATI: StatoSessione[] = ['SETUP', 'COMMIT', 'REVEAL', 'DISCUSSIONE', 'LOCKED'];
@@ -70,14 +77,14 @@ export function FacilitatorPanel({ ctx, chiudi }: { ctx: Contesto; chiudi: () =>
         <section className={SEZIONE} style={FILETTO}>
           <span className="etichetta">apri un round</span>
           <div className="grid grid-cols-2 gap-1">
-            {MODULI.map((m) => (
+            {CONFIG_MODULI.map((m) => (
               <button
                 key={m.modulo}
                 className="bottone text-[13px] text-left flex items-baseline gap-2"
                 onClick={() =>
                   invia('session.create', {
                     modulo: m.modulo,
-                    titolo: m.titolo,
+                    titolo: MODULI[m.modulo].nome,
                     durataS: m.durataS,
                     revealAnonimo: m.anonimo ?? false,
                   })
@@ -87,7 +94,7 @@ export function FacilitatorPanel({ ctx, chiudi }: { ctx: Contesto; chiudi: () =>
                 <span className="mono shrink-0" style={{ color: 'var(--wda-bright)' }}>
                   {m.modulo}
                 </span>
-                <span className="truncate min-w-0">{m.titolo}</span>
+                <span className="truncate min-w-0">{MODULI[m.modulo].nome}</span>
               </button>
             ))}
           </div>
@@ -142,7 +149,7 @@ export function FacilitatorPanel({ ctx, chiudi }: { ctx: Contesto; chiudi: () =>
                 className="bottone bottone-primario text-[13px]"
                 onClick={() => invia('session.reveal', { sessioneId: sessioneAttiva.id })}
               >
-                Reveal
+                Apri il {FASI.REVEAL.nome.toLowerCase()}
               </button>
             </div>
 
@@ -157,7 +164,7 @@ export function FacilitatorPanel({ ctx, chiudi }: { ctx: Contesto; chiudi: () =>
                   invia('session.setAnonimo', { sessioneId: sessioneAttiva.id, revealAnonimo: e.target.checked })
                 }
               />
-              Reveal anonimo
+              Risposte anonime al {FASI.REVEAL.nome.toLowerCase()}
             </label>
           </section>
         )}

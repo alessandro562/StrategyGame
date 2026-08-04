@@ -14,40 +14,21 @@ import { Premessa } from '../comune';
 import { QrCode } from '@/components/QrCode';
 import { TestataModulo, TestataModuloMano } from '@/components/TestataModulo';
 import { useStore } from '@/net/useStore';
+import { VINCOLI } from '@/lib/glossario';
 import type { Profilo, Qualitativo } from '@/lib/types';
 
 const PROFILI: Profilo[] = ['founder', 'operativo', 'board', 'non_operativo'];
 const QUALITATIVI: Qualitativo[] = ['basso', 'medio', 'alto'];
 
-/**
+/*
  * R, G e B sono le chiavi del modello dati, non un nome: da sole non dicono
  * niente a chi le legge la prima volta. Restano come sigla, ma davanti ci va
  * il nome per esteso, sotto cosa si sta contando, e accanto al campo l'unità
  * di misura — altrimenti «8» non si sa se sono clienti, mesi o persone.
+ *
+ * I nomi vivono nel glossario e non qui: le stesse tre risorse ricompaiono
+ * nella traiettoria di M6 e nella tabella dei trimestri del verbale.
  */
-const VINCOLI: { chiave: 'R' | 'G' | 'B'; nome: string; descrizione: string; unita: string }[] = [
-  {
-    chiave: 'R',
-    nome: 'Relazioni di fiducia',
-    descrizione:
-      'Quanti clienti o partner riusciamo a seguire davvero nello stesso periodo, prima che la relazione si degradi.',
-    unita: 'relazioni in parallelo',
-  },
-  {
-    chiave: 'G',
-    nome: 'Decisioni con la nostra firma',
-    descrizione:
-      'Quante volte al mese qualcuno del team può mettere la faccia su una scelta: approvare, garantire, esporsi.',
-    unita: 'al mese',
-  },
-  {
-    chiave: 'B',
-    nome: 'Trattative aperte',
-    descrizione:
-      'Quante conversazioni di vendita vere possiamo tenere aperte insieme, dal primo contatto alla firma.',
-    unita: 'in parallelo',
-  },
-];
 
 export function M0Tavolo({ urlMano }: { urlMano: string }) {
   const { stato, invia, nome } = useStore();
