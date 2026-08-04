@@ -20,11 +20,13 @@ Per lavorare con Redis vero, copiare `.env.example` in `.env.local` e riempire `
 
 ## Deploy
 
-```bash
-vercel --prod
-```
+Su Vercel serve un database Redis: aggiungere **Upstash for Redis** dal marketplace (Storage → Create Database), collegarlo al progetto e **rifare il deploy** — le variabili si leggono all'avvio, un deploy precedente non le vede.
 
-Su Vercel: aggiungere l'integrazione **Upstash Redis** dal marketplace. Inietta le variabili d'ambiente da sola, non c'è configurazione manuale.
+L'app accetta due nomenclature, perché cambiano a seconda di come è collegato il database: `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (integrazione Upstash classica) oppure `KV_REST_API_URL` / `KV_REST_API_TOKEN` (marketplace Vercel). Ne basta una.
+
+**Se mancano entrambe, su Vercel l'app si rifiuta di partire** e lo dice in chiaro. È voluto: lì lo store in memoria non fallirebbe, farebbe di peggio — ogni invocazione atterra su un'istanza diversa, quindi perderebbe commit a caso e ve ne accorgereste al reveal. La home mostra `redis collegato` o `redis non configurato`: è il primo posto da guardare dopo un deploy.
+
+Il codice sta sul branch `claude/wda-tool-logo-colors-j21j5o`. Vercel come branch di produzione usa `main`: o si porta il codice su `main`, o si cambia **Settings → Git → Production Branch**.
 
 ## Le due viste
 

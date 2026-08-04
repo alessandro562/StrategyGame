@@ -31,10 +31,23 @@ export default function Home() {
         </p>
 
         {effimero && (
-          <p className="m-0 text-[12px]" style={{ color: 'var(--tension)' }}>
-            Redis non configurato: lo stato vive in memoria e sparisce al riavvio del processo. Per il ritiro serve
-            l&apos;integrazione Upstash su Vercel — UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN.
-          </p>
+          <div className="pannello p-3" style={{ borderColor: 'var(--tension)' }}>
+            <div className="etichetta mb-1" style={{ color: 'var(--tension)' }}>
+              redis non configurato
+            </div>
+            <p className="m-0 text-[12px]" style={{ color: 'var(--ink-dim)' }}>
+              Lo stato vive in memoria: sparisce al riavvio e non è condiviso. Va bene per sviluppare, non per il
+              ritiro. Collega Upstash dal marketplace Vercel e <strong>rifai il deploy</strong> — le variabili si
+              leggono all’avvio.
+            </p>
+          </div>
+        )}
+
+        {!effimero && (
+          <span className="flex items-center gap-2 etichetta">
+            <span className="inline-block w-2 h-2" style={{ background: 'var(--live)' }} />
+            redis collegato
+          </span>
         )}
       </div>
     </main>

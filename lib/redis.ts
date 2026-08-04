@@ -155,18 +155,48 @@ class MemoryAdapter implements RedisLike {
   }
 }
 
+/**
+ * Le credenziali arrivano con due nomi diversi a seconda di come è stato
+ * collegato il database:
+ *  - integrazione Upstash classica  -> UPSTASH_REDIS_REST_URL / _TOKEN
+ *  - Upstash dal marketplace Vercel -> KV_REST_API_URL / KV_REST_API_TOKEN
+ * Leggerne uno solo significa ritrovarsi in produzione sullo store in memoria
+ * senza accorgersene.
+ */
+function credenziali(): { url: string; token: string } | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  return url && token ? { url, token } : null;
+}
+
+/** true quando giriamo su Vercel, dove lo store in memoria non è utilizzabile. */
+function inProduzioneServerless(): boolean {
+  return process.env.VERCEL === '1' || !!process.env.VERCEL_ENV;
+}
+
 let istanza: RedisLike | null = null;
 
 export function redis(): RedisLike {
   if (istanza) return istanza;
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  istanza = url && token ? new UpstashAdapter(new Redis({ url, token })) : new MemoryAdapter();
+  const c = credenziali();
+
+  // Su Vercel ogni invocazione può atterrare su un'istanza diversa: lo store in
+  // memoria non fallirebbe, farebbe di peggio — perderebbe commit a caso senza
+  // che nessuno se ne accorga fino al reveal. Meglio un errore esplicito.
+  if (!c && inProduzioneServerless()) {
+    throw new Error(
+      'Redis non configurato. Collega Upstash dal marketplace Vercel, oppure imposta ' +
+        'UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN (o KV_REST_API_URL e ' +
+        'KV_REST_API_TOKEN), poi rifai il deploy: le variabili si leggono all’avvio.',
+    );
+  }
+
+  istanza = c ? new UpstashAdapter(new Redis(c)) : new MemoryAdapter();
   return istanza;
 }
 
 export function redisEffimero(): boolean {
-  return !(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+  return credenziali() === null;
 }
 
 /** Solo per i test: riparte da uno store pulito. */
