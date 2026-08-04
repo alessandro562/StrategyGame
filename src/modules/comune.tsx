@@ -21,12 +21,15 @@ export function Intestazione({
 }) {
   return (
     <div className="flex items-start justify-between gap-6">
-      <div>
+      <div className="min-w-0">
         <div className="flex items-baseline gap-3">
-          <span className="mono text-[13px]" style={{ color: 'var(--wda-bright)' }}>
+          <span className="mono text-[13px] shrink-0" style={{ color: 'var(--wda-bright)' }}>
             {modulo}
           </span>
-          <h1 className="m-0 text-[22px] font-normal" style={{ letterSpacing: '-0.01em' }}>
+          <h1
+            className="m-0 text-[22px] font-normal leading-tight"
+            style={{ letterSpacing: '-0.01em' }}
+          >
             {titolo}
           </h1>
         </div>
@@ -44,7 +47,9 @@ export function Intestazione({
 export function Premessa({ children }: { children: ReactNode }) {
   return (
     <div className="pannello px-4 py-3" style={{ borderLeft: '2px solid var(--wda)' }}>
-      <p className="m-0 text-[14px]" style={{ color: 'var(--ink)' }}>
+      {/* 15px, non 14: la premessa è prosa primaria, e il 14 era un gradino
+          che nel resto del prodotto non esiste più. */}
+      <p className="m-0 text-[15px]" style={{ color: 'var(--ink)' }}>
         {children}
       </p>
     </div>
@@ -54,7 +59,9 @@ export function Premessa({ children }: { children: ReactNode }) {
 export function Vuoto({ children }: { children: ReactNode }) {
   return (
     <div className="pannello p-6 flex items-center justify-center">
-      <span className="text-[14px]" style={{ color: 'var(--ink-dim)' }}>
+      {/* Stesso corpo e stesso colore dello stato vuoto di FasciaFase: i due
+          "qui non c'è niente" dell'app si leggono alla stessa misura. */}
+      <span className="text-[15px]" style={{ color: 'var(--ink-dim)' }}>
         {children}
       </span>
     </div>
@@ -104,14 +111,18 @@ export function BottoneTocco({
   disabilitato?: boolean;
 }) {
   const c = colore ?? 'var(--wda-bright)';
+  // Lo stato disabilitato va dichiarato qui: questi colori sono inline e
+  // vincono sulla regola `button:disabled` dei token, che quindi da sola non
+  // spegnerebbe niente.
+  const bordo = disabilitato ? 'var(--line)' : attivo ? c : 'var(--line-strong)';
   return (
     <button
-      className="flex-1 flex items-center justify-center text-center px-2"
+      className="flex-1 flex items-center justify-center text-center px-2 py-2 leading-snug"
       style={{
         minHeight: 48,
-        border: `1px solid ${attivo ? c : 'var(--line-strong)'}`,
-        background: attivo ? c : 'var(--bg-raised)',
-        color: attivo ? '#0b0e12' : 'var(--ink-dim)',
+        border: `1px solid ${bordo}`,
+        background: attivo && !disabilitato ? c : 'var(--bg-raised)',
+        color: disabilitato ? 'var(--ink-faint)' : attivo ? 'var(--ink-inverso)' : 'var(--ink-dim)',
         fontWeight: attivo ? 500 : 400,
         borderRadius: 'var(--radius)',
       }}
@@ -128,10 +139,10 @@ export function AttesaMano({ sessione }: { sessione: Sessione | null }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6">
       <span className="etichetta">{sessione ? 'si lavora insieme' : 'in attesa'}</span>
-      <p className="m-0 text-[17px] text-center" style={{ color: 'var(--ink)' }}>
+      <p className="m-0 text-[17px] text-center max-w-[32rem]" style={{ color: 'var(--ink)' }}>
         {sessione ? `${sessione.modulo} — ${sessione.titolo}` : 'Nessun round aperto'}
       </p>
-      <p className="m-0 text-[14px] text-center" style={{ color: 'var(--ink-dim)' }}>
+      <p className="m-0 text-[15px] text-center max-w-[32rem]" style={{ color: 'var(--ink-dim)' }}>
         {sessione
           ? 'Questo momento si fa a voce, guardando lo schermo grande. Quando toccherà a te rispondere in privato, questa schermata cambia da sola.'
           : 'Chi facilita non ha ancora aperto un round.'}

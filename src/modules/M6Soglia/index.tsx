@@ -18,6 +18,12 @@ import { LockButton } from '@/components/LockButton';
 import { useRevealPartito } from '@/components/RevealStage';
 import { useStore } from '@/net/useStore';
 
+/** Tacche dell'asse 0-100. */
+const TACCHE = [0, 25, 50, 75, 100];
+
+/** Geometria dell'asse, in pixel: una sola fonte per linea, tacche ed etichette. */
+const ASSE = { altezza: 76, y: 36, tacca: 12, punto: 10, condivisa: 40 };
+
 export function M6Tavolo({ sessione }: { sessione: Sessione }) {
   const ctx = useStore();
   const { stato, invia, presenti, nome, ora } = ctx;
@@ -27,8 +33,11 @@ export function M6Tavolo({ sessione }: { sessione: Sessione }) {
 
   const statoCommit = stato.statiCommit.find((s) => s.sessioneId === sessione.id);
   const rivelato = sessione.stato !== 'COMMIT' && sessione.stato !== 'SETUP';
+  // Dopo il reveal i punti restano a schermo: l'opacità serve solo alla comparsa.
+  const mostraPunti = partito || sessione.stato !== 'REVEAL';
   const f = forbice(stato.soglie);
   const condivisa = soglia ?? stato.workshop.sogliaCondivisaPct;
+  const conTrigger = stato.soglie.filter((s) => s.trigger.trim());
 
   return (
     <div className="flex flex-col gap-4">
@@ -45,7 +54,7 @@ export function M6Tavolo({ sessione }: { sessione: Sessione }) {
       {rivelato && (
         <>
           {/* La forbice è la cosa più grande a schermo dopo il reveal. */}
-          <div className="pannello p-6 flex flex-col items-center">
+          <div className="pannello p-6 flex flex-col items-center gap-2">
             <span className="etichetta">forbice</span>
             <div
               className="mono leading-none"
@@ -53,64 +62,107 @@ export function M6Tavolo({ sessione }: { sessione: Sessione }) {
             >
               {f.ampiezza}
             </div>
-            <span className="mono text-[15px] mt-1" style={{ color: 'var(--ink-dim)' }}>
-              punti — da {f.min ?? '—'}% a {f.max ?? '—'}%
-            </span>
+            <div className="text-[15px]" style={{ color: 'var(--ink-dim)' }}>
+              punti — da <span className="mono" style={{ color: 'var(--ink)' }}>{f.min ?? '—'}</span>% a{' '}
+              <span className="mono" style={{ color: 'var(--ink)' }}>{f.max ?? '—'}</span>%
+            </div>
           </div>
 
           {/* Le soglie come punti su un asse 0-100%, senza nomi. */}
-          <div className="pannello p-5">
-            <div className="etichetta mb-4">soglie individuali</div>
-            <div className="relative h-16" style={{ opacity: partito ? 1 : 0, transition: 'opacity 240ms' }}>
-              <div className="absolute left-0 right-0 top-8 h-px" style={{ background: 'var(--line-strong)' }} />
-              {[0, 25, 50, 75, 100].map((t) => (
-                <div key={t} className="absolute top-6" style={{ left: `${t}%` }}>
-                  <div className="w-px h-4" style={{ background: 'var(--line-strong)' }} />
-                  <span className="mono text-[10px] absolute -translate-x-1/2 top-5" style={{ color: 'var(--ink-faint)' }}>
+          <div className="pannello p-5 flex flex-col gap-4">
+            <span className="etichetta">soglie individuali</span>
+
+            <div
+              className="relative"
+              style={{ height: ASSE.altezza, opacity: mostraPunti ? 1 : 0, transition: 'opacity 240ms' }}
+            >
+              <div
+                className="absolute left-0 right-0"
+                style={{ top: ASSE.y, height: 1, background: 'var(--line-strong)' }}
+              />
+
+              {TACCHE.map((t) => (
+                <div key={t} className="absolute" style={{ left: `${t}%`, top: ASSE.y - ASSE.tacca / 2 }}>
+                  <div style={{ width: 1, height: ASSE.tacca, background: 'var(--line-strong)' }} />
+                  <span
+                    className="mono text-[11px] absolute -translate-x-1/2"
+                    style={{ top: ASSE.tacca + 4, color: 'var(--ink-faint)' }}
+                  >
                     {t}
                   </span>
                 </div>
               ))}
+
               {stato.soglie.map((s, i) => (
                 <div
                   key={`${s.partecipanteId}-${i}`}
                   className="absolute"
-                  style={{ left: `${s.sogliaPct}%`, top: 24, transform: 'translateX(-50%)' }}
+                  style={{
+                    left: `${s.sogliaPct}%`,
+                    top: ASSE.y - ASSE.punto / 2,
+                    transform: 'translateX(-50%)',
+                    width: ASSE.punto,
+                    height: ASSE.punto,
+                    background: 'var(--live)',
+                    // Il contorno del colore della pagina stacca i punti sovrapposti.
+                    border: '1px solid var(--bg-deep)',
+                  }}
                   title={`${s.sogliaPct}% — ${s.mesiAutonomia} mesi`}
-                >
-                  <div className="w-3 h-3" style={{ background: 'var(--live)', border: '1px solid var(--bg-deep)' }} />
-                </div>
+                />
               ))}
+
               {condivisa !== null && (
-                <div className="absolute" style={{ left: `${condivisa}%`, top: 8 }}>
-                  <div className="w-px h-14" style={{ background: 'var(--locked)' }} />
+                <div
+                  className="absolute"
+                  style={{ left: `${condivisa}%`, top: ASSE.y - ASSE.condivisa / 2 }}
+                  title={`Soglia condivisa: ${condivisa}%`}
+                >
+                  <div style={{ width: 2, height: ASSE.condivisa, background: 'var(--locked)' }} />
                 </div>
               )}
             </div>
+
+            <div className="flex items-center gap-5">
+              <span className="etichetta flex items-center gap-2">
+                <span className="shrink-0" style={{ width: 10, height: 10, background: 'var(--live)' }} />
+                soglia individuale
+              </span>
+              <span className="etichetta flex items-center gap-2">
+                <span className="shrink-0" style={{ width: 2, height: 12, background: 'var(--locked)' }} />
+                soglia condivisa
+              </span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 items-start">
-            <div className="pannello p-4">
-              <div className="etichetta mb-2">trigger di allarme — mescolati, non attribuiti</div>
-              <ul className="m-0 pl-4 flex flex-col gap-1">
-                {mescolaConSeme(
-                  stato.soglie.filter((s) => s.trigger.trim()),
-                  `trigger:${sessione.id}`,
-                ).map((s, i) => (
-                  <li key={i} className="text-[14px]">
-                    {s.trigger}
-                  </li>
-                ))}
-                {stato.soglie.every((s) => !s.trigger.trim()) && (
-                  <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-                    Nessun trigger scritto.
-                  </span>
-                )}
-              </ul>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="pannello p-4 flex flex-col gap-3">
+              <span className="etichetta">trigger di allarme — mescolati, non attribuiti</span>
+              {conTrigger.length === 0 ? (
+                <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                  Nessun trigger scritto.
+                </span>
+              ) : (
+                // Marcatore esplicito: il preflight di Tailwind azzera i
+                // pallini nativi, quindi `pl-4` da solo dava righe rientrate e
+                // basta. Stesso quadratino da 4px di M5.
+                <ul className="m-0 p-0 list-none flex flex-col gap-2">
+                  {mescolaConSeme(conTrigger, `trigger:${sessione.id}`).map((s, i) => (
+                    <li key={i} className="flex items-start gap-3 text-[13px]">
+                      <span
+                        aria-hidden
+                        className="shrink-0"
+                        style={{ width: 4, height: 4, marginTop: 8, background: 'var(--ink-faint)' }}
+                      />
+                      <span>{s.trigger}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div className="pannello p-4 flex flex-col gap-3">
-              <div className="etichetta">soglia condivisa da negoziare</div>
+              <span className="etichetta">soglia condivisa da negoziare</span>
+
               <div className="flex items-center gap-3">
                 <input
                   type="range"
@@ -121,14 +173,26 @@ export function M6Tavolo({ sessione }: { sessione: Sessione }) {
                   onMouseUp={() => soglia !== null && invia('workshop.update', { sogliaCondivisaPct: soglia })}
                   onTouchEnd={() => soglia !== null && invia('workshop.update', { sogliaCondivisaPct: soglia })}
                   className="flex-1"
+                  style={{ height: 36 }}
                 />
-                <span className="mono text-[28px]" style={{ color: 'var(--locked)' }}>
+                <span
+                  className="mono text-[28px] leading-none w-[92px] text-right shrink-0"
+                  style={{ color: 'var(--locked)' }}
+                >
                   {condivisa ?? 80}%
                 </span>
               </div>
-              <span className="etichetta">
-                forbice originale registrata: {stato.workshop.forbiceOriginale ?? f.ampiezza} punti
-              </span>
+
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="etichetta">forbice originale registrata</span>
+                <span className="text-[13px] shrink-0" style={{ color: 'var(--ink-dim)' }}>
+                  <span className="mono" style={{ color: 'var(--ink)' }}>
+                    {stato.workshop.forbiceOriginale ?? f.ampiezza}
+                  </span>{' '}
+                  punti
+                </span>
+              </div>
+
               {sessione.stato !== 'LOCKED' && (
                 <LockButton
                   contenuto={{
@@ -163,11 +227,12 @@ function Traiettoria() {
   const altezza = 160;
 
   return (
-    <div className="pannello p-4">
-      <div className="flex items-baseline justify-between mb-3">
+    <div className="pannello p-4 flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-4">
         <span className="etichetta">traiettoria verso gennaio 2027 — quota servizi per trimestre</span>
-        <span className="etichetta">trascina le colonne</span>
+        <span className="etichetta shrink-0">trascina le colonne</span>
       </div>
+
       <div
         className="flex items-end gap-3"
         style={{ height: altezza, touchAction: 'none' }}
@@ -181,22 +246,32 @@ function Traiettoria() {
         onPointerLeave={() => setTrascinato(null)}
       >
         {stato.traiettoria.map((t) => (
-          <div key={t.id} className="flex-1 flex flex-col justify-end h-full" style={{ cursor: 'ns-resize' }}>
+          <div
+            key={t.id}
+            className="flex-1 flex flex-col justify-end h-full"
+            // La corsia resta visibile anche a quota zero: si vede dove si trascina.
+            style={{ cursor: 'ns-resize', background: 'var(--bg-raised)', border: '1px solid var(--line)' }}
+          >
             <span className="mono text-[13px] text-center mb-1">{t.quotaServiziPct}%</span>
             <div
-              style={{ height: `${t.quotaServiziPct}%`, background: 'var(--wda)', border: '1px solid var(--wda-bright)' }}
+              style={{
+                height: `${t.quotaServiziPct}%`,
+                background: 'var(--wda)',
+                borderTop: '1px solid var(--wda-deep)',
+              }}
               onPointerDown={() => setTrascinato(t.id)}
             />
           </div>
         ))}
       </div>
-      <div className="flex gap-3 mt-2">
+
+      <div className="flex gap-3">
         {stato.traiettoria.map((t) => (
-          <div key={t.id} className="flex-1 text-center">
-            <div className="etichetta">{t.etichetta}</div>
-            <div className="mono text-[11px]" style={{ color: 'var(--ink-faint)' }}>
+          <div key={t.id} className="flex-1 flex flex-col items-center gap-1">
+            <span className="etichetta">{t.etichetta}</span>
+            <span className="mono text-[13px]" style={{ color: 'var(--ink-dim)' }}>
               R{t.consumo.R} G{t.consumo.G} B{t.consumo.B}
-            </div>
+            </span>
           </div>
         ))}
       </div>
@@ -217,9 +292,22 @@ export function M6Mano({ sessione }: { sessione: Sessione }) {
   if (sessione.stato !== 'COMMIT') {
     return (
       <CompitoMano titolo="La tua soglia" sottotitolo="In sola lettura — il reveal è anonimo">
-        <div className="mono text-[32px]">{p?.sogliaPct ?? '—'}%</div>
-        <div className="text-[14px] mt-2">{p?.mesiAutonomia ?? '—'} mesi di autonomia</div>
-        {p?.trigger && <p className="text-[14px] mt-2">{p.trigger}</p>}
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1">
+            <span className="etichetta">soglia di sicurezza</span>
+            <span className="mono text-[28px] leading-none">{p?.sogliaPct ?? '—'}%</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="etichetta">mesi di autonomia</span>
+            <span className="mono text-[28px] leading-none">{p?.mesiAutonomia ?? '—'}</span>
+          </div>
+          {p?.trigger && (
+            <div className="flex flex-col gap-1">
+              <span className="etichetta">trigger di allarme</span>
+              <p className="m-0 text-[15px]">{p.trigger}</p>
+            </div>
+          )}
+        </div>
       </CompitoMano>
     );
   }
@@ -252,9 +340,9 @@ export function M6Mano({ sessione }: { sessione: Sessione }) {
       }
     >
       <div className="flex flex-col gap-5">
-        <div>
+        <div className="flex flex-col gap-2">
           <span className="etichetta">soglia di sicurezza — quota ricavi da servizi</span>
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center gap-3">
             <input
               type="range"
               min={0}
@@ -263,15 +351,15 @@ export function M6Mano({ sessione }: { sessione: Sessione }) {
               onChange={(e) => setSogliaPct(Number(e.target.value))}
               onPointerUp={() => salva({ sogliaPct })}
               className="flex-1"
-              style={{ height: 40 }}
+              style={{ height: 48 }}
             />
-            <span className="mono text-[28px]">{sogliaPct}%</span>
+            <span className="mono text-[28px] leading-none w-[92px] text-right shrink-0">{sogliaPct}%</span>
           </div>
         </div>
 
-        <div>
+        <div className="flex flex-col gap-2">
           <span className="etichetta">mesi di autonomia</span>
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center gap-3">
             <input
               type="range"
               min={0}
@@ -280,16 +368,16 @@ export function M6Mano({ sessione }: { sessione: Sessione }) {
               onChange={(e) => setMesi(Number(e.target.value))}
               onPointerUp={() => salva({ mesiAutonomia: mesi })}
               className="flex-1"
-              style={{ height: 40 }}
+              style={{ height: 48 }}
             />
-            <span className="mono text-[28px]">{mesi}</span>
+            <span className="mono text-[28px] leading-none w-[92px] text-right shrink-0">{mesi}</span>
           </div>
         </div>
 
-        <div>
+        <div className="flex flex-col gap-2">
           <span className="etichetta">trigger di allarme</span>
           <textarea
-            className="w-full text-[15px] mt-2"
+            className="w-full text-[15px]"
             rows={4}
             placeholder="Cosa deve succedere perché tu dica che stiamo sbagliando"
             value={trigger}

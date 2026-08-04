@@ -3,6 +3,11 @@
 /**
  * §3.3 — il lock registra la decisione e i dissensi.
  * Il dissenso non viene cancellato dal lock: resta nel verbale.
+ *
+ * Due gradini di testo: 11 per le etichette, 13 per tutto il resto. Il pannello
+ * è denso e vive dentro un'altra vista, quindi non si concede una terza misura.
+ * Le sigle di modulo e i conteggi vanno in .mono, il resto nel carattere di
+ * interfaccia.
  */
 
 import { useState } from 'react';
@@ -28,13 +33,12 @@ export function LockButton({
   const [aValle, setAValle] = useState<string[]>([]);
 
   if (!aperto) {
+    // Niente colore inline sopra .bottone-primario: al passaggio del mouse la
+    // classe riempie il bottone di --wda, e un testo scuro imposto a mano
+    // resterebbe blu su blu. Il testo sopra un riempimento pieno lo decide la
+    // classe, che usa --ink-inverso.
     return (
-      <button
-        className="bottone bottone-primario"
-        disabled={disabilitato}
-        onClick={() => setAperto(true)}
-        style={{ borderColor: 'var(--locked)', color: 'var(--locked)' }}
-      >
+      <button className="bottone bottone-primario" disabled={disabilitato} onClick={() => setAperto(true)}>
         Blocca la decisione
       </button>
     );
@@ -43,7 +47,7 @@ export function LockButton({
   const conNota = Object.entries(dissensi).filter(([, n]) => n.trim().length > 0);
 
   return (
-    <div className="pannello p-4 flex flex-col gap-3" style={{ borderColor: 'var(--locked)' }}>
+    <div className="pannello p-4 flex flex-col gap-4" style={{ borderColor: 'var(--locked)' }}>
       <div className="etichetta" style={{ color: 'var(--locked)' }}>
         blocco della decisione
       </div>
@@ -53,7 +57,9 @@ export function LockButton({
         <div className="flex flex-col gap-1">
           {partecipanti.map((p) => (
             <label key={p.id} className="flex items-center gap-2">
-              <span className="text-[13px] w-24 shrink-0" style={{ color: 'var(--ink-dim)' }}>
+              {/* Colonna fissa: i nomi restano incolonnati e i campi partono
+                  tutti dalla stessa ascissa, anche col nome lungo. */}
+              <span className="text-[13px] w-24 shrink-0 truncate" style={{ color: 'var(--ink-dim)' }}>
                 {nome(p.id)}
               </span>
               <input
@@ -74,13 +80,13 @@ export function LockButton({
             {lockAValle.map((l) => (
               <button
                 key={l.id}
-                className="bottone text-[12px]"
+                className="bottone text-[13px]"
                 aria-pressed={aValle.includes(l.id)}
                 onClick={() =>
                   setAValle(aValle.includes(l.id) ? aValle.filter((x) => x !== l.id) : [...aValle, l.id])
                 }
               >
-                {l.modulo} — {l.titolo}
+                <span className="mono">{l.modulo}</span> {l.titolo}
               </button>
             ))}
           </div>
@@ -89,8 +95,7 @@ export function LockButton({
 
       <div className="flex gap-2">
         <button
-          className="bottone bottone-primario"
-          style={{ borderColor: 'var(--locked)', color: 'var(--locked)' }}
+          className="bottone bottone-primario text-[13px]"
           onClick={() => {
             onLock(
               contenuto,
@@ -102,9 +107,10 @@ export function LockButton({
             setAValle([]);
           }}
         >
-          Blocca — {conNota.length} {conNota.length === 1 ? 'dissenso' : 'dissensi'}
+          Blocca — <span className="mono">{conNota.length}</span>{' '}
+          {conNota.length === 1 ? 'dissenso' : 'dissensi'}
         </button>
-        <button className="bottone" onClick={() => setAperto(false)}>
+        <button className="bottone text-[13px]" onClick={() => setAperto(false)}>
           Annulla
         </button>
       </div>
@@ -125,18 +131,27 @@ export function BannerRiapertura({
   if (riaperti.length === 0) return null;
   return (
     <div className="pannello px-4 py-2 flex items-center gap-4 flex-wrap" style={{ borderColor: 'var(--tension)' }}>
-      <span className="mono text-[13px]" style={{ color: 'var(--tension)' }}>
-        {riaperti.map((l) => `${l.modulo} riaperto`).join(' · ')} — {aValle.length}{' '}
+      {/* .mono solo su sigle e conteggi: la frase resta nel carattere di
+          interfaccia, come nel resto del prodotto. */}
+      <span className="text-[13px]" style={{ color: 'var(--tension)' }}>
+        {riaperti.map((l, i) => (
+          <span key={l.id}>
+            {i > 0 && ' · '}
+            <span className="mono">{l.modulo}</span> riaperto
+          </span>
+        ))}
+        {' — '}
+        <span className="mono">{aValle.length}</span>{' '}
         {aValle.length === 1 ? 'decisione a valle da riconvalidare' : 'decisioni a valle da riconvalidare'}
       </span>
       {aValle.map((l) => (
-        <button key={l.id} className="bottone text-[12px]" onClick={() => onRiconferma(l.id)}>
-          Riconferma {l.modulo} — {l.titolo}
+        <button key={l.id} className="bottone text-[13px]" onClick={() => onRiconferma(l.id)}>
+          Riconferma <span className="mono">{l.modulo}</span> — {l.titolo}
         </button>
       ))}
       {riaperti.map((l) => (
-        <button key={l.id} className="bottone text-[12px]" onClick={() => onRiconferma(l.id)}>
-          Ri-blocca {l.modulo}
+        <button key={l.id} className="bottone text-[13px]" onClick={() => onRiconferma(l.id)}>
+          Ri-blocca <span className="mono">{l.modulo}</span>
         </button>
       ))}
     </div>

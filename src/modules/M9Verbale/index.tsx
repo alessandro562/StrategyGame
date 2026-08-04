@@ -36,28 +36,39 @@ export function M9Tavolo() {
         titolo="Il verbale"
         sottotitolo="Generato dai dati del ritiro. Scaricabile anche con moduli incompleti."
         destra={
-          <div className="flex gap-2">
-            <a className="bottone bottone-primario" href="/api/export?scarica=1">
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              className="bottone bottone-primario inline-flex items-center text-[13px]"
+              href="/api/export?scarica=1"
+            >
               Scarica markdown
             </a>
-            <a className="bottone" href="/api/export?formato=json">
+            <a
+              className="bottone inline-flex items-center text-[13px]"
+              href="/api/export?formato=json"
+            >
               Scarica stato
             </a>
           </div>
         }
       />
 
-      <div className="pannello p-5 flex-1 min-h-0 overflow-y-auto barra-scorrimento">
-        {!caricato ? (
-          <span className="etichetta">generazione…</span>
-        ) : (
-          <pre
-            className="mono text-[12px] m-0 whitespace-pre-wrap"
-            style={{ color: 'var(--ink-dim)', lineHeight: 1.6 }}
-          >
-            {markdown}
-          </pre>
-        )}
+      <div className="pannello p-4 flex-1 min-h-0 flex flex-col gap-3">
+        <div className="etichetta">anteprima</div>
+        <div className="flex-1 min-h-0 overflow-y-auto barra-scorrimento">
+          {!caricato ? (
+            <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+              Generazione in corso…
+            </span>
+          ) : (
+            <pre
+              className="mono text-[13px] m-0 whitespace-pre-wrap"
+              style={{ color: 'var(--ink)', lineHeight: 1.6 }}
+            >
+              {markdown}
+            </pre>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -66,7 +77,11 @@ export function M9Tavolo() {
 export function M9Mano() {
   return (
     <CompitoMano titolo="Il verbale" sottotitolo="Disponibile in qualsiasi momento">
-      <a className="bottone bottone-primario block text-center" style={{ minHeight: 52, lineHeight: '38px' }} href="/api/export?scarica=1">
+      <a
+        className="bottone bottone-primario flex items-center justify-center text-center text-[15px]"
+        style={{ minHeight: 52 }}
+        href="/api/export?scarica=1"
+      >
         Scarica il verbale
       </a>
     </CompitoMano>

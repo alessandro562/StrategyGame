@@ -10,6 +10,11 @@
  *
  * Registrazione e accesso stanno nella stessa schermata perché al primo giro
  * nessuno sa quale dei due gli serve.
+ *
+ * Quattro gradini di testo e non uno di più: 11 per le etichette, 13 per le
+ * note, 15 per il testo corrente, 16 per ciò che si tocca. I 16px sui campi
+ * non sono estetica — sotto quella soglia iOS ingrandisce la pagina al fuoco e
+ * il modulo salta fuori dallo schermo. Ogni bersaglio sta sopra i 48px.
  */
 
 import { useState } from 'react';
@@ -65,15 +70,15 @@ export function Entra({
       style={{ background: 'var(--bg-deep)' }}
     >
       <div className="w-full" style={{ maxWidth: 380 }}>
-        <div className="mb-7">
+        <div className="mb-6">
           <Logo altezza={30} />
           <p className="m-0 mt-3 text-[15px]" style={{ color: 'var(--ink-dim)' }}>
-            Strategy room — ritiro 5/6 agosto
+            Strategy room — ritiro <span className="mono">5/6</span> agosto
           </p>
         </div>
 
         {/* Due modi, un solo posto: al primo giro non sai quale ti serve. */}
-        <div className="flex gap-1 mb-5" role="tablist">
+        <div className="flex gap-1 mb-6" role="tablist">
           {(['registra', 'entra'] as Modo[]).map((m) => (
             <button
               key={m}
@@ -81,7 +86,7 @@ export function Entra({
               aria-selected={modo === m}
               className="flex-1 text-[15px]"
               style={{
-                minHeight: 46,
+                minHeight: 48,
                 border: `1px solid ${modo === m ? 'var(--wda-bright)' : 'var(--line-strong)'}`,
                 background: modo === m ? 'var(--wda-wash)' : 'transparent',
                 color: modo === m ? 'var(--wda-bright)' : 'var(--ink-dim)',
@@ -96,12 +101,12 @@ export function Entra({
           ))}
         </div>
 
-        <form onSubmit={invia} className="flex flex-col gap-4">
+        <form onSubmit={invia} className="flex flex-col gap-5">
           {modo === 'registra' && (
-            <Campo etichetta="Come ti chiami">
+            <Campo etichetta="come ti chiami">
               <input
-                className="w-full text-[17px]"
-                style={{ minHeight: 50 }}
+                className="w-full text-[16px]"
+                style={{ minHeight: 48 }}
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 autoComplete="name"
@@ -110,13 +115,13 @@ export function Entra({
                 required
               />
               {nomiSuggeriti.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
+                <div className="flex flex-wrap gap-2">
                   {nomiSuggeriti.map((n) => (
                     <button
                       key={n}
                       type="button"
-                      className="bottone text-[13px]"
-                      style={{ minHeight: 38 }}
+                      className="bottone text-[15px]"
+                      style={{ minHeight: 48 }}
                       aria-pressed={nome === n}
                       onClick={() => setNome(n)}
                     >
@@ -128,10 +133,10 @@ export function Entra({
             </Campo>
           )}
 
-          <Campo etichetta="Email">
+          <Campo etichetta="email">
             <input
-              className="w-full text-[17px]"
-              style={{ minHeight: 50 }}
+              className="w-full text-[16px]"
+              style={{ minHeight: 48 }}
               type="email"
               inputMode="email"
               autoComplete="email"
@@ -145,12 +150,12 @@ export function Entra({
           </Campo>
 
           <Campo
-            etichetta="Password"
+            etichetta="password"
             aiuto={modo === 'registra' ? 'Almeno 4 caratteri. Serve solo a ritrovarti, scegline una facile.' : undefined}
           >
             <input
-              className="w-full text-[17px]"
-              style={{ minHeight: 50 }}
+              className="w-full text-[16px]"
+              style={{ minHeight: 48 }}
               type="password"
               autoComplete={modo === 'registra' ? 'new-password' : 'current-password'}
               value={password}
@@ -161,7 +166,7 @@ export function Entra({
 
           {errore && (
             <div
-              className="px-3 py-2 text-[14px]"
+              className="px-3 py-2 text-[15px]"
               role="alert"
               style={{ border: '1px solid var(--erosion)', color: 'var(--erosion)' }}
             >
@@ -179,7 +184,7 @@ export function Entra({
           </button>
         </form>
 
-        <p className="m-0 mt-5 text-[13px]" style={{ color: 'var(--ink-faint)' }}>
+        <p className="m-0 mt-6 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
           L’accesso serve a sapere di chi è ogni posizione. Durante il commit cieco nessuno vede le risposte degli
           altri, nemmeno chi proietta.
         </p>
@@ -199,12 +204,10 @@ function Campo({
 }) {
   return (
     <label className="flex flex-col gap-2">
-      <span className="text-[14px]" style={{ color: 'var(--ink)' }}>
-        {etichetta}
-      </span>
+      <span className="etichetta">{etichetta}</span>
       {children}
       {aiuto && (
-        <span className="text-[12px]" style={{ color: 'var(--ink-faint)' }}>
+        <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
           {aiuto}
         </span>
       )}

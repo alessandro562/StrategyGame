@@ -8,7 +8,6 @@
  * che il team accetta, modifica o scarta.
  */
 
-import { useState } from 'react';
 import { QUOTA_MASSIMA_OWNER, controlliM8 } from '@/lib/calc';
 import { proposteAzioni } from '@/lib/handlers';
 import type { Azione, Orizzonte, Sessione } from '@/lib/types';
@@ -17,6 +16,13 @@ import { useStore } from '@/net/useStore';
 
 const SCADENZA_90 = '2026-10-31';
 const SCADENZA_GEN = '2027-01-31';
+
+/**
+ * Le colonne della tabella stanno in un'unica costante: intestazione e righe
+ * sono griglie separate, e se i due tracciati divergono le colonne non si
+ * allineano più.
+ */
+const COLONNE = 'grid grid-cols-[1fr_140px_140px_130px_92px] gap-2 items-center';
 
 export function M8Tavolo({ sessione }: { sessione: Sessione }) {
   const { stato, invia, presenti, nome } = useStore();
@@ -34,23 +40,23 @@ export function M8Tavolo({ sessione }: { sessione: Sessione }) {
         destra={
           <div className="text-right">
             <div className="etichetta">azioni</div>
-            <div className="mono text-[28px] leading-none">{stato.azioni.length}</div>
+            <div className="mono text-[28px] leading-none mt-1">{stato.azioni.length}</div>
           </div>
         }
       />
 
       {proposte.length > 0 && (
         <div className="pannello p-4">
-          <div className="etichetta mb-2">proposte dalle decisioni bloccate</div>
+          <div className="etichetta mb-3">proposte dalle decisioni bloccate</div>
           <div className="flex flex-col gap-2">
             {proposte.map((p) => (
-              <div key={p.lockId} className="flex items-center gap-2">
-                <span className="mono text-[12px] w-8" style={{ color: 'var(--locked)' }}>
+              <div key={p.lockId} className="flex items-center gap-3">
+                <span className="mono text-[13px] w-8 shrink-0" style={{ color: 'var(--locked)' }}>
                   {p.modulo}
                 </span>
-                <span className="text-[14px] flex-1">{p.testo}</span>
+                <span className="text-[13px] flex-1 min-w-0">{p.testo}</span>
                 <button
-                  className="bottone text-[12px]"
+                  className="bottone text-[13px] shrink-0"
                   onClick={() =>
                     invia('azione.upsert', {
                       testo: p.testo,
@@ -70,23 +76,23 @@ export function M8Tavolo({ sessione }: { sessione: Sessione }) {
       )}
 
       <div className="pannello p-4 flex flex-col gap-2">
-        <div className="grid grid-cols-[1fr_140px_140px_130px_auto] gap-2 items-center">
+        <div className={`${COLONNE} pb-2`} style={{ borderBottom: '1px solid var(--line)' }}>
           <span className="etichetta">azione — verbo all&apos;infinito</span>
           <span className="etichetta">owner</span>
           <span className="etichetta">scadenza</span>
           <span className="etichetta">orizzonte</span>
-          <span />
+          <span className="etichetta">origine</span>
         </div>
         {stato.azioni.map((a) => (
           <RigaAzione key={a.id} azione={a} />
         ))}
         {stato.azioni.length === 0 && (
-          <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+          <span className="text-[13px] py-1" style={{ color: 'var(--ink-dim)' }}>
             Nessuna azione.
           </span>
         )}
         <button
-          className="bottone text-[12px] self-start mt-1"
+          className="bottone text-[13px] self-start mt-2"
           onClick={() =>
             invia('azione.upsert', {
               testo: 'Nuova azione',
@@ -113,38 +119,68 @@ export function M8Tavolo({ sessione }: { sessione: Sessione }) {
           )}
           <div className="flex flex-col gap-2">
             {controlli.perOwner.map((o) => (
-              <div key={o.ownerId} className="flex items-center gap-3">
-                <span className="text-[13px] w-24 shrink-0">{nome(o.ownerId)}</span>
-                <div className="flex-1 h-2" style={{ background: 'var(--bg-deep)', border: '1px solid var(--line)' }}>
+              <div
+                key={o.ownerId}
+                className="grid grid-cols-[7rem_1fr_2rem_3rem] gap-3 items-center"
+              >
+                <span className="text-[13px] truncate">{nome(o.ownerId)}</span>
+                <div
+                  className="h-2"
+                  style={{ background: 'var(--bg-raised)', border: '1px solid var(--line)' }}
+                >
                   <div
                     className="h-full"
-                    style={{ width: `${o.quota * 100}%`, background: o.sovraccarico ? 'var(--tension)' : 'var(--wda)' }}
+                    style={{
+                      width: `${o.quota * 100}%`,
+                      background: o.sovraccarico ? 'var(--tension)' : 'var(--wda)',
+                    }}
                   />
                 </div>
-                <span className="mono text-[12px] w-16 text-right" style={{ color: o.sovraccarico ? 'var(--tension)' : 'var(--ink-dim)' }}>
-                  {o.conteggio} · {Math.round(o.quota * 100)}%
+                <span
+                  className="mono text-[13px] text-right"
+                  style={{ color: o.sovraccarico ? 'var(--tension)' : 'var(--ink-dim)' }}
+                >
+                  {o.conteggio}
+                </span>
+                <span
+                  className="mono text-[13px] text-right"
+                  style={{ color: o.sovraccarico ? 'var(--tension)' : 'var(--ink-dim)' }}
+                >
+                  {Math.round(o.quota * 100)}%
                 </span>
               </div>
             ))}
           </div>
           {controlli.perOwner.some((o) => o.sovraccarico) && (
-            <p className="m-0 mt-3 text-[12px]" style={{ color: 'var(--tension)' }}>
-              Una persona ha più del {QUOTA_MASSIMA_OWNER * 100}% delle azioni.
+            <p className="m-0 mt-3 text-[13px]" style={{ color: 'var(--tension)' }}>
+              Una persona ha più del <span className="mono">{QUOTA_MASSIMA_OWNER * 100}%</span>{' '}
+              delle azioni.
             </p>
           )}
         </div>
 
-        <div className="pannello p-4 flex flex-col gap-2">
-          <div className="etichetta mb-1">controlli di chiusura</div>
-          <Controllo ok={controlli.senzaOwner.length === 0} testo={`${controlli.senzaOwner.length} azioni senza owner`} />
-          <Controllo ok={controlli.senzaScadenza.length === 0} testo={`${controlli.senzaScadenza.length} azioni senza data`} />
-          <Controllo
-            ok={controlli.lockSenzaAzione.length === 0}
-            testo={`${controlli.lockSenzaAzione.length} decisioni senza esecuzione`}
-            avviso
-          />
+        <div className="pannello p-4 flex flex-col">
+          <div className="etichetta mb-3">controlli di chiusura</div>
+          <div className="flex flex-col gap-2">
+            <Controllo
+              ok={controlli.senzaOwner.length === 0}
+              conteggio={controlli.senzaOwner.length}
+              testo="Azioni senza owner"
+            />
+            <Controllo
+              ok={controlli.senzaScadenza.length === 0}
+              conteggio={controlli.senzaScadenza.length}
+              testo="Azioni senza data"
+            />
+            <Controllo
+              ok={controlli.lockSenzaAzione.length === 0}
+              conteggio={controlli.lockSenzaAzione.length}
+              testo="Decisioni senza esecuzione"
+              avviso
+            />
+          </div>
           <button
-            className="bottone bottone-primario mt-2 self-start"
+            className="bottone bottone-primario text-[13px] mt-4 self-start"
             disabled={!controlli.chiudibile || sessione.stato === 'LOCKED'}
             onClick={() =>
               invia('lock.create', {
@@ -162,13 +198,27 @@ export function M8Tavolo({ sessione }: { sessione: Sessione }) {
   );
 }
 
-function Controllo({ ok, testo, avviso }: { ok: boolean; testo: string; avviso?: boolean }) {
+function Controllo({
+  ok,
+  conteggio,
+  testo,
+  avviso,
+}: {
+  ok: boolean;
+  conteggio: number;
+  testo: string;
+  avviso?: boolean;
+}) {
   const colore = ok ? 'var(--live)' : avviso ? 'var(--tension)' : 'var(--erosion)';
+  const coloreTesto = ok ? 'var(--ink-dim)' : colore;
   return (
     <div className="flex items-center gap-2">
-      <span className="inline-block w-2 h-2" style={{ background: colore }} />
-      <span className="text-[13px]" style={{ color: ok ? 'var(--ink-dim)' : colore }}>
+      <span className="inline-block w-2 h-2 shrink-0" style={{ background: colore }} />
+      <span className="text-[13px] flex-1 min-w-0" style={{ color: coloreTesto }}>
         {testo}
+      </span>
+      <span className="mono text-[13px] w-8 text-right" style={{ color: coloreTesto }}>
+        {conteggio}
       </span>
     </div>
   );
@@ -191,9 +241,9 @@ function RigaAzione({ azione }: { azione: Azione }) {
     });
 
   return (
-    <div className="grid grid-cols-[1fr_140px_140px_130px_auto] gap-2 items-center">
+    <div className={COLONNE}>
       <input
-        className="text-[14px]"
+        className="text-[13px]"
         defaultValue={azione.testo}
         onBlur={(e) => e.target.value !== azione.testo && aggiorna({ testo: e.target.value })}
       />
@@ -229,11 +279,19 @@ function RigaAzione({ azione }: { azione: Azione }) {
         <option value="90_GIORNI">90 giorni</option>
         <option value="A_GENNAIO_2027">gennaio 2027</option>
       </select>
-      <div className="flex items-center gap-1">
-        <span className="mono text-[11px]" style={{ color: 'var(--locked)' }} title={l ? `${l.modulo} — ${l.titolo}` : 'nessuna decisione di origine'}>
+      <div className="flex items-center gap-2">
+        <span
+          className="mono text-[13px] w-7"
+          style={{ color: 'var(--locked)' }}
+          title={l ? `${l.modulo} — ${l.titolo}` : 'nessuna decisione di origine'}
+        >
           {l?.modulo ?? '—'}
         </span>
-        <button className="bottone text-[12px]" onClick={() => invia('entity.delete', { tipo: 'azione', id: azione.id })}>
+        <button
+          className="bottone text-[13px]"
+          aria-label="Elimina azione"
+          onClick={() => invia('entity.delete', { tipo: 'azione', id: azione.id })}
+        >
           ×
         </button>
       </div>
@@ -253,11 +311,20 @@ export function M8Mano() {
       ) : (
         <div className="flex flex-col gap-2">
           {mie.map((a) => (
-            <div key={a.id} className="rialzato p-3">
-              <div className="text-[15px]">{a.testo}</div>
-              <div className="mono text-[12px] mt-1" style={{ color: 'var(--ink-dim)' }}>
-                {a.scadenza} · {a.orizzonte === '90_GIORNI' ? '90 giorni' : 'gennaio 2027'}
-              </div>
+            <div key={a.id} className="rialzato p-3 flex flex-col gap-1">
+              <span className="text-[15px]">{a.testo}</span>
+              <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                <span className="mono">{a.scadenza}</span> ·{' '}
+                {a.orizzonte === '90_GIORNI' ? (
+                  <>
+                    <span className="mono">90</span> giorni
+                  </>
+                ) : (
+                  <>
+                    gennaio <span className="mono">2027</span>
+                  </>
+                )}
+              </span>
             </div>
           ))}
         </div>

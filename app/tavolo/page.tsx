@@ -10,11 +10,11 @@ import { useSearchParams } from 'next/navigation';
 import { daRiconvalidare, indicatori, storicoCappelli } from '@/lib/calc';
 import { CODICE_STANZA_DEFAULT } from '@/lib/seed';
 import { CtxStore, useContestoMemo, useStore } from '@/net/useStore';
-import { esci, usePolling } from '@/net/usePolling';
+import { usePolling } from '@/net/usePolling';
 import { AttesaCommit } from '@/components/AttesaCommit';
 import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { Entra } from '@/components/Entra';
-import { FasciaFase } from '@/components/FasciaFase';
+import { FasciaFase, nomeFase } from '@/components/FasciaFase';
 import { FacilitatorPanel } from '@/components/FacilitatorPanel';
 import { MappaCappelli } from '@/components/HatBadge';
 import { IndicatorStrip } from '@/components/IndicatorStrip';
@@ -112,37 +112,55 @@ function Tavolo() {
         className="h-screen flex flex-col sala"
         style={{ background: 'var(--bg-deep)', ['--scala' as string]: scala }}
       >
-        {/* Barra superiore: timer onnipresente, marchio, stato rete */}
+        {/* Barra superiore: marchio e nome della stanza a sinistra, le letture
+            (round, timer, rete) al centro, i comandi a destra dopo un filetto.
+            Va a capo invece di tagliare: a scala 2 la riga non ci sta, e un
+            comando che finisce fuori dal proiettore è un comando perso. */}
         <header
-          className="flex items-center gap-6 px-5 py-3 shrink-0"
+          className="flex items-center flex-wrap gap-x-5 gap-y-2 px-5 py-3 shrink-0"
           style={{ borderBottom: '1px solid var(--line)', background: 'var(--bg-panel)' }}
         >
-          <Logo altezza={22} />
-          <span className="etichetta">{s?.workshop.nome ?? 'WDA Strategy Room'}</span>
+          {/* Su fondo chiaro il marchio va nella variante blu. */}
+          <Logo altezza={22} variante="blu" />
+          {/* Il nome della stanza è contenuto, non un'etichetta: in
+              maiuscoletto spaziato si leggeva come intestazione di un campo. */}
+          <span className="text-[15px]">{s?.workshop.nome ?? 'WDA Strategy Room'}</span>
           <div className="flex-1" />
+
           {sessione && (
-            <span className="mono text-[13px]" style={{ color: 'var(--wda-bright)' }}>
-              {sessione.modulo} · {sessione.stato}
+            <span className="flex items-baseline gap-2">
+              <span className="etichetta">round</span>
+              {/* Il nome della fase è quello della fascia, non la chiave
+                  dell'enum: sullo stesso schermo la stessa cosa si chiama in
+                  un modo solo. */}
+              <span className="mono text-[13px]" style={{ color: 'var(--wda-bright)' }}>
+                {sessione.modulo} · {nomeFase(sessione.stato)}
+              </span>
             </span>
           )}
           <Timer sessione={sessione} ora={polling.ora} />
           <ConnectionBanner rete={polling.rete} inCoda={polling.inCoda} soloLettura={polling.soloLettura} />
-          <ControlloScala scala={scala} setScala={setScala} />
-          {facilitatoreAltrove && (
-            <button
-              className="bottone text-[12px]"
-              style={{ borderColor: 'var(--tension)', color: 'var(--tension)' }}
-              onClick={() => polling.invia('workshop.rivendicaFacilitatore', {})}
-            >
-              Prendi il ruolo
+
+          <span aria-hidden className="self-stretch" style={{ width: 1, background: 'var(--line)' }} />
+
+          <div className="flex items-center gap-2">
+            <ControlloScala scala={scala} setScala={setScala} />
+            {facilitatoreAltrove && (
+              <button
+                className="bottone text-[13px]"
+                style={{ borderColor: 'var(--tension)', color: 'var(--tension)' }}
+                onClick={() => polling.invia('workshop.rivendicaFacilitatore', {})}
+              >
+                Prendi il ruolo
+              </button>
+            )}
+            <button className="bottone text-[13px]" onClick={() => setPannello(true)}>
+              Facilitatore
             </button>
-          )}
-          <button className="bottone text-[12px]" onClick={() => setPannello(true)}>
-            Facilitatore
-          </button>
+          </div>
         </header>
 
-        <div className="px-5 pt-3 pb-2 shrink-0 flex gap-3 items-stretch flex-wrap">
+        <div className="px-5 py-3 shrink-0 flex gap-3 items-stretch flex-wrap">
           <div className="flex-1 min-w-[420px]">
             <FasciaFase sessione={sessione} ruolo="tavolo" />
           </div>
@@ -150,7 +168,7 @@ function Tavolo() {
         </div>
 
         {riaperture.riaperti.length > 0 && (
-          <div className="px-5 pb-2 shrink-0">
+          <div className="px-5 pb-3 shrink-0">
             <BannerRiapertura
               riaperti={riaperture.riaperti}
               aValle={riaperture.aValle}
@@ -159,8 +177,8 @@ function Tavolo() {
           </div>
         )}
 
-        <div className="flex-1 min-h-0 flex gap-4 px-5 pb-4">
-          <main className="flex-1 min-w-0 overflow-y-auto barra-scorrimento flex flex-col gap-4">
+        <div className="flex-1 min-h-0 flex gap-3 px-5 pb-3">
+          <main className="flex-1 min-w-0 overflow-y-auto barra-scorrimento flex flex-col gap-3">
             {!s ? (
               <Vuoto>Collegamento in corso…</Vuoto>
             ) : !sessione ? (
@@ -180,15 +198,20 @@ function Tavolo() {
         </div>
 
         {sessione && Object.keys(sessione.cappelli).length > 0 && (
-          <footer className="px-5 py-2 shrink-0" style={{ borderTop: '1px solid var(--line)' }}>
+          <footer className="px-5 py-3 shrink-0" style={{ borderTop: '1px solid var(--line)' }}>
             <MappaCappelli cappelli={sessione.cappelli} nome={ctx.nome} />
           </footer>
         )}
 
         {!sessione && Object.keys(storico).length > 0 && (
-          <footer className="px-5 py-2 shrink-0" style={{ borderTop: '1px solid var(--line)' }}>
-            <span className="etichetta">cappelli già portati: </span>
-            <span className="text-[12px]" style={{ color: 'var(--ink-dim)' }}>
+          // Etichetta e contenuto su due colonne, non un'unica riga con i due
+          // punti dentro l'etichetta: l'elenco parte sempre dallo stesso punto.
+          <footer
+            className="px-5 py-3 shrink-0 flex items-baseline gap-3"
+            style={{ borderTop: '1px solid var(--line)' }}
+          >
+            <span className="etichetta shrink-0">cappelli già portati</span>
+            <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
               {Object.entries(storico)
                 .map(([pidx, c]) => `${ctx.nome(pidx)} ${c.join('/')}`)
                 .join(' · ')}
@@ -223,28 +246,34 @@ function useScalaSala(): [number, (v: number) => void] {
 
 function ControlloScala({ scala, setScala }: { scala: number; setScala: (v: number) => void }) {
   return (
-    <div className="flex items-center gap-1" title="Dimensione della vista di sala">
-      <button
-        className="bottone text-[13px]"
-        style={{ padding: '4px 9px' }}
-        onClick={() => setScala(scala - 0.1)}
-        disabled={scala <= 0.8}
-        aria-label="Riduci la vista"
-      >
-        A−
-      </button>
-      <span className="mono text-[11px] w-9 text-center" style={{ color: 'var(--ink-faint)' }}>
-        {Math.round(scala * 100)}%
-      </span>
-      <button
-        className="bottone text-[13px]"
-        style={{ padding: '4px 9px' }}
-        onClick={() => setScala(scala + 0.1)}
-        disabled={scala >= 2}
-        aria-label="Ingrandisci la vista"
-      >
-        A+
-      </button>
+    // I due bottoni tornano all'altezza standard degli altri comandi della
+    // barra: con un padding proprio restavano più bassi e la riga si scaleggiava.
+    // La percentuale è un valore letto da lontano, non una didascalia: sta alla
+    // scala del testo, non a quella delle etichette, e in una casella di
+    // larghezza fissa perché passando da 90% a 100% i bottoni non si spostino.
+    <div className="flex items-center gap-2" title="Dimensione della vista di sala">
+      <span className="etichetta">scala</span>
+      <div className="flex items-center gap-1">
+        <button
+          className="bottone mono text-[13px]"
+          onClick={() => setScala(scala - 0.1)}
+          disabled={scala <= 0.8}
+          aria-label="Riduci la vista di sala"
+        >
+          A−
+        </button>
+        <span className="mono text-[13px] w-12 text-center" style={{ color: 'var(--ink)' }}>
+          {Math.round(scala * 100)}%
+        </span>
+        <button
+          className="bottone mono text-[13px]"
+          onClick={() => setScala(scala + 0.1)}
+          disabled={scala >= 2}
+          aria-label="Ingrandisci la vista di sala"
+        >
+          A+
+        </button>
+      </div>
     </div>
   );
 }

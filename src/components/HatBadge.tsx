@@ -12,10 +12,14 @@ export function HatBadge({ cappello, compatto = false }: { cappello: Cappello | 
   }
 
   if (compatto) {
+    // Stesso trattamento del nome del cappello nelle altre due rese (scheda
+    // estesa e MappaCappelli): mono 13px in --wda-bright. Con .etichetta lo
+    // stesso valore usciva a 11px con un'altra crenatura, cioè la stessa cosa
+    // scritta in due modi a seconda di dove capitava.
     return (
       <span
-        className="etichetta px-2 py-1"
-        style={{ border: '1px solid var(--wda)', color: 'var(--wda-bright)' }}
+        className="mono text-[13px] px-2 py-1"
+        style={{ border: '1px solid var(--wda)', color: 'var(--wda-bright)', letterSpacing: '0.08em' }}
       >
         {cappello}
       </span>
@@ -23,14 +27,21 @@ export function HatBadge({ cappello, compatto = false }: { cappello: Cappello | 
   }
 
   return (
-    <div className="rialzato p-3" style={{ borderColor: 'var(--wda-deep)' }}>
+    <div className="rialzato p-3" style={{ borderLeft: '3px solid var(--wda)' }}>
       <div className="flex items-baseline justify-between gap-3 mb-2">
-        <span className="mono text-[13px]" style={{ color: 'var(--wda-bright)', letterSpacing: '0.08em' }}>
+        <span className="mono text-[13px] shrink-0" style={{ color: 'var(--wda-bright)', letterSpacing: '0.08em' }}>
           {cappello}
         </span>
-        <span className="etichetta">difende: {CAPPELLO_DIFENDE[cappello]}</span>
+        {/* .etichetta solo sulla parola "difende": il valore è contenuto, e in
+            maiuscoletto spaziato diventava illeggibile. */}
+        <span className="flex items-baseline gap-2 min-w-0">
+          <span className="etichetta shrink-0">difende</span>
+          <span className="text-[13px] text-right" style={{ color: 'var(--ink-dim)' }}>
+            {CAPPELLO_DIFENDE[cappello]}
+          </span>
+        </span>
       </div>
-      <p className="text-[14px] m-0" style={{ color: 'var(--ink)' }}>
+      <p className="text-[15px] m-0" style={{ color: 'var(--ink)' }}>
         “{CAPPELLO_DOMANDA[cappello]}”
       </p>
     </div>
@@ -49,8 +60,11 @@ export function MappaCappelli({
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1">
       {voci.map(([pid, c]) => (
-        <span key={pid} className="text-[12px]" style={{ color: 'var(--ink-dim)' }}>
-          {nome(pid)} <span className="mono" style={{ color: 'var(--wda-bright)' }}>{c}</span>
+        <span key={pid} className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+          {nome(pid)}{' '}
+          <span className="mono" style={{ color: 'var(--wda-bright)' }}>
+            {c}
+          </span>
         </span>
       ))}
     </div>

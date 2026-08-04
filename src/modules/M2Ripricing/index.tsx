@@ -42,26 +42,27 @@ export function M2Tavolo({ sessione }: { sessione: Sessione }) {
       <Premessa>Se l’artefatto è quasi gratis, il prezzo non può più stare sul tempo impiegato.</Premessa>
 
       {!servizio && (
-        <div className="pannello p-4">
+        <div className="pannello p-4 flex flex-col gap-2">
           <span className="etichetta">servizi in nucleo</span>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            {nucleo.length === 0 && (
-              <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-                Nessun servizio in NUCLEO: si passa da M1.
-              </span>
-            )}
-            {nucleo.map((s) => (
-              <button
-                key={s.id}
-                className="bottone p-3 text-left"
-                onClick={() =>
-                  invia('session.create', { modulo: 'M2', titolo: s.nome, soggettoId: s.id, durataS: 180 })
-                }
-              >
-                {s.nome}
-              </button>
-            ))}
-          </div>
+          {nucleo.length === 0 ? (
+            <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+              Nessun servizio in NUCLEO: si passa da M1.
+            </span>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {nucleo.map((s) => (
+                <button
+                  key={s.id}
+                  className="bottone p-3 text-left text-[13px]"
+                  onClick={() =>
+                    invia('session.create', { modulo: 'M2', titolo: s.nome, soggettoId: s.id, durataS: 180 })
+                  }
+                >
+                  {s.nome}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -71,45 +72,73 @@ export function M2Tavolo({ sessione }: { sessione: Sessione }) {
 
       {servizio && sessione.stato !== 'COMMIT' && sessione.stato !== 'SETUP' && (
         <>
-          <RevealStage
-            elementi={conteggi}
-            seme={sessione.id}
-            partito={partito || sessione.stato !== 'REVEAL'}
-            chiave={(c) => c.base}
-            className="pannello p-4 flex flex-col gap-3"
-            render={(c) => (
-              <div className="flex items-center gap-3">
-                <span className="mono text-[13px] w-32" style={{ color: c.n === massimo && c.n > 0 ? 'var(--live)' : 'var(--ink)' }}>
-                  {c.base}
-                </span>
-                <div className="w-40 h-3 shrink-0" style={{ background: 'var(--bg-deep)', border: '1px solid var(--line)' }}>
-                  <div className="h-full" style={{ width: `${(c.n / Math.max(presenti.length, 1)) * 100}%`, background: 'var(--live)' }} />
+          <div className="pannello p-4 flex flex-col gap-3">
+            <span className="etichetta">commit per base</span>
+            <RevealStage
+              elementi={conteggi}
+              seme={sessione.id}
+              partito={partito || sessione.stato !== 'REVEAL'}
+              chiave={(c) => c.base}
+              className="flex flex-col gap-2"
+              render={(c) => (
+                <div className="flex items-center gap-3">
+                  <span
+                    className="mono text-[13px] w-32 shrink-0"
+                    style={{ color: c.n === massimo && c.n > 0 ? 'var(--live)' : 'var(--ink)' }}
+                  >
+                    {c.base}
+                  </span>
+                  <div
+                    className="w-40 h-3 shrink-0"
+                    style={{ background: 'var(--bg-raised)', border: '1px solid var(--line)' }}
+                  >
+                    <div
+                      className="h-full"
+                      style={{ width: `${(c.n / Math.max(presenti.length, 1)) * 100}%`, background: 'var(--live)' }}
+                    />
+                  </div>
+                  <span className="mono text-[13px] w-8 text-right shrink-0">{c.n}</span>
+                  <span
+                    className="mono text-[13px] w-8 text-right shrink-0"
+                    style={{ color: 'var(--ink-dim)' }}
+                  >
+                    {c.secondarie > 0 ? `+${c.secondarie}` : ''}
+                  </span>
+                  <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                    {BASE_DOMANDA[c.base]}
+                  </span>
                 </div>
-                <span className="mono text-[13px] w-16">
-                  {c.n}
-                  {c.secondarie > 0 && <span style={{ color: 'var(--ink-faint)' }}> +{c.secondarie}</span>}
-                </span>
-                <span className="text-[12px]" style={{ color: 'var(--ink-faint)' }}>
-                  {BASE_DOMANDA[c.base]}
-                </span>
-              </div>
-            )}
-          />
+              )}
+            />
+          </div>
 
           <div className="pannello p-4 flex flex-col gap-3">
             <span className="etichetta">base scelta</span>
             <div className="flex flex-wrap gap-2">
-              {[...BASI, 'GIORNATA' as BasePrezzo].map((b) => (
-                <button
-                  key={b}
-                  className="bottone text-[13px]"
-                  aria-pressed={servizio.basePrezzo?.primaria === b}
-                  onClick={() => invia('servizio.setBasePrezzo', { servizioId: servizio.id, primaria: b })}
-                  style={b === 'GIORNATA' ? { borderColor: 'var(--erosion)', color: 'var(--erosion)' } : undefined}
-                >
-                  {b}
-                </button>
-              ))}
+              {[...BASI, 'GIORNATA' as BasePrezzo].map((b) => {
+                const attiva = servizio.basePrezzo?.primaria === b;
+                return (
+                  <button
+                    key={b}
+                    className="bottone mono text-[13px]"
+                    aria-pressed={attiva}
+                    onClick={() => invia('servizio.setBasePrezzo', { servizioId: servizio.id, primaria: b })}
+                    style={
+                      b !== 'GIORNATA'
+                        ? undefined
+                        : attiva
+                          ? {
+                              borderColor: 'var(--erosion)',
+                              background: 'var(--erosion)',
+                              color: 'var(--ink-inverso)',
+                            }
+                          : { borderColor: 'var(--erosion)', color: 'var(--erosion)' }
+                    }
+                  >
+                    {b}
+                  </button>
+                );
+              })}
             </div>
             {servizio.basePrezzo?.primaria === 'PARTECIPAZIONE' && (
               <input
@@ -127,13 +156,13 @@ export function M2Tavolo({ sessione }: { sessione: Sessione }) {
               />
             )}
             {!servizio.basePrezzo || servizio.basePrezzo.primaria === 'GIORNATA' ? (
-              <span className="mono text-[13px]" style={{ color: 'var(--erosion)' }}>
-                A GIORNATA — EROSIONE ATTESA
+              <span className="text-[13px]" style={{ color: 'var(--erosion)' }}>
+                A giornata — erosione attesa
               </span>
             ) : null}
             {vincente.length > 1 && (
-              <span className="etichetta" style={{ color: 'var(--tension)' }}>
-                pareggio fra {vincente.map((v) => v.base).join(' e ')} — la scelta resta al tavolo
+              <span className="text-[13px]" style={{ color: 'var(--tension)' }}>
+                Pareggio fra {vincente.map((v) => v.base).join(' e ')} — la scelta resta al tavolo
               </span>
             )}
 
@@ -153,14 +182,20 @@ export function M2Tavolo({ sessione }: { sessione: Sessione }) {
         </>
       )}
 
-      <div className="pannello p-6 flex flex-col items-center">
-        <span className="etichetta">del fatturato futuro poggia su una base in erosione</span>
+      <div className="pannello p-6 flex flex-col items-center gap-2">
         <div
           className="mono leading-none"
-          style={{ fontSize: 'clamp(48px, 8vw, 104px)', color: erosione > 0 ? 'var(--erosion)' : 'var(--ink-faint)', letterSpacing: '-0.03em' }}
+          style={{
+            fontSize: 'clamp(48px, 8vw, 104px)',
+            color: erosione > 0 ? 'var(--erosion)' : 'var(--ink-faint)',
+            letterSpacing: '-0.03em',
+          }}
         >
           {erosione.toFixed(0)}%
         </div>
+        <span className="text-[13px] text-center" style={{ color: 'var(--ink-dim)' }}>
+          del fatturato futuro poggia su una base in erosione
+        </span>
       </div>
     </div>
   );
@@ -178,9 +213,24 @@ export function M2Mano({ sessione }: { sessione: Sessione }) {
   if (sessione.stato !== 'COMMIT') {
     return (
       <CompitoMano titolo={servizio.nome} sottotitolo="Il tuo commit, in sola lettura">
-        <div className="mono text-[15px]">{p?.primaria ?? '—'}</div>
-        {p?.secondaria && <div className="mono text-[13px]" style={{ color: 'var(--ink-dim)' }}>+ {p.secondaria}</div>}
-        {p?.nota && <p className="text-[13px] mt-2">{p.nota}</p>}
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1">
+            <span className="etichetta">base primaria</span>
+            <span className="mono text-[15px]">{p?.primaria ?? '—'}</span>
+          </div>
+          {p?.secondaria && (
+            <div className="flex flex-col gap-1">
+              <span className="etichetta">base secondaria</span>
+              <span className="mono text-[15px]">{p.secondaria}</span>
+            </div>
+          )}
+          {p?.nota && (
+            <div className="flex flex-col gap-1">
+              <span className="etichetta">struttura ipotizzata</span>
+              <p className="m-0 text-[15px]">{p.nota}</p>
+            </div>
+          )}
+        </div>
       </CompitoMano>
     );
   }
@@ -209,38 +259,43 @@ export function M2Mano({ sessione }: { sessione: Sessione }) {
         </div>
       }
     >
-      <div className="flex flex-col gap-3">
-        <span className="etichetta">base primaria</span>
-        {BASI.map((b) => (
-          <div key={b}>
-            <BottoneTocco attivo={p?.primaria === b} onClick={() => imposta({ primaria: b })}>
-              {b}
-            </BottoneTocco>
-            <p className="m-0 mt-1 text-[12px]" style={{ color: 'var(--ink-faint)' }}>
-              {BASE_DOMANDA[b]}
-            </p>
-          </div>
-        ))}
-
-        <span className="etichetta mt-2">base secondaria — opzionale</span>
-        <div className="flex flex-wrap gap-1">
-          {BASI.filter((b) => b !== p?.primaria).map((b) => (
-            <button
-              key={b}
-              className="bottone text-[12px]"
-              aria-pressed={p?.secondaria === b}
-              onClick={() => imposta({ secondaria: p?.secondaria === b ? undefined : b })}
-            >
-              {b}
-            </button>
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3">
+          <span className="etichetta">base primaria</span>
+          {BASI.map((b) => (
+            <div key={b} className="flex flex-col gap-1">
+              <BottoneTocco attivo={p?.primaria === b} onClick={() => imposta({ primaria: b })}>
+                <span className="mono">{b}</span>
+              </BottoneTocco>
+              <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+                {BASE_DOMANDA[b]}
+              </p>
+            </div>
           ))}
         </div>
 
+        <div className="flex flex-col gap-2">
+          <span className="etichetta">base secondaria — opzionale</span>
+          <div className="flex flex-wrap gap-2">
+            {BASI.filter((b) => b !== p?.primaria).map((b) => (
+              <button
+                key={b}
+                className="bottone mono text-[13px] px-3"
+                style={{ minHeight: 48 }}
+                aria-pressed={p?.secondaria === b}
+                onClick={() => imposta({ secondaria: p?.secondaria === b ? undefined : b })}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {(p?.primaria === 'PARTECIPAZIONE' || p?.secondaria === 'PARTECIPAZIONE') && (
-          <div>
+          <div className="flex flex-col gap-2">
             <span className="etichetta">struttura ipotizzata</span>
             <textarea
-              className="w-full text-[14px] mt-1"
+              className="w-full"
               rows={3}
               placeholder="equity, revenue share, success fee…"
               defaultValue={p?.nota ?? ''}

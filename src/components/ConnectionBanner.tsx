@@ -17,27 +17,29 @@ export function ConnectionBanner({
   inCoda: number;
   soloLettura: boolean;
 }) {
-  if (rete === 'connesso' && !soloLettura) {
-    return (
-      <span className="flex items-center gap-2 etichetta">
-        <span className="inline-block w-2 h-2" style={{ background: 'var(--live)' }} />
-        connesso
-      </span>
-    );
-  }
+  const connesso = rete === 'connesso' && !soloLettura;
 
-  const [colore, testo] =
-    rete === 'errore'
+  // Nominale: pastiglia verde, testo neutro come le altre etichette. Fuori
+  // nominale: il testo prende il colore dello stato. Un solo accento per volta.
+  const [colore, testo]: [string, React.ReactNode] = connesso
+    ? ['var(--live)', 'connesso']
+    : rete === 'errore'
       ? ['var(--erosion)', 'errore di sincronizzazione']
       : inCoda > 0
-        ? ['var(--tension)', `offline — ${inCoda} ${inCoda === 1 ? 'azione' : 'azioni'} in coda`]
+        ? [
+            'var(--tension)',
+            <>
+              offline — <span className="mono">{inCoda}</span>{' '}
+              {inCoda === 1 ? 'azione' : 'azioni'} in coda
+            </>,
+          ]
         : soloLettura
           ? ['var(--tension)', 'stato dalla cache locale — sola lettura']
           : ['var(--tension)', 'offline'];
 
   return (
-    <span className="flex items-center gap-2 etichetta" style={{ color: colore }}>
-      <span className="inline-block w-2 h-2" style={{ background: colore }} />
+    <span className="etichetta flex items-center gap-2" style={connesso ? undefined : { color: colore }}>
+      <span className="inline-block w-2 h-2 shrink-0" style={{ background: colore }} />
       {testo}
     </span>
   );

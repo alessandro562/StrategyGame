@@ -8,7 +8,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0b0e12',
+  // I metadati non leggono le custom properties: questo valore è la copia
+  // letterale di --bg-deep e va tenuto allineato a mano se il token cambia.
+  themeColor: '#ffffff',
+  // Il tema è chiaro e basta. Senza dichiararlo, un telefono in modalità scura
+  // ridipinge da sé i controlli nativi — campi, menù a tendina, barre di
+  // scorrimento — e restano scuri dentro un'interfaccia bianca.
+  colorScheme: 'light',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
