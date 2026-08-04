@@ -10,18 +10,43 @@
  * legge a mano tesa e non su un proiettore.
  */
 
-import { Intestazione, Premessa } from '../comune';
+import { Premessa } from '../comune';
 import { QrCode } from '@/components/QrCode';
+import { TestataModulo, TestataModuloMano } from '@/components/TestataModulo';
 import { useStore } from '@/net/useStore';
 import type { Profilo, Qualitativo } from '@/lib/types';
 
 const PROFILI: Profilo[] = ['founder', 'operativo', 'board', 'non_operativo'];
 const QUALITATIVI: Qualitativo[] = ['basso', 'medio', 'alto'];
 
-const VINCOLI: { chiave: 'R' | 'G' | 'B'; nome: string; descrizione: string }[] = [
-  { chiave: 'R', nome: 'Relazioni contemporanee', descrizione: 'Rapporti di fiducia reggibili in parallelo' },
-  { chiave: 'G', nome: 'Gate decisionali umani', descrizione: 'Decisioni al mese in cui qualcuno mette la faccia' },
-  { chiave: 'B', nome: 'Banda commerciale', descrizione: 'Conversazioni di vendita reale aperte in parallelo' },
+/**
+ * R, G e B sono le chiavi del modello dati, non un nome: da sole non dicono
+ * niente a chi le legge la prima volta. Restano come sigla, ma davanti ci va
+ * il nome per esteso, sotto cosa si sta contando, e accanto al campo l'unità
+ * di misura — altrimenti «8» non si sa se sono clienti, mesi o persone.
+ */
+const VINCOLI: { chiave: 'R' | 'G' | 'B'; nome: string; descrizione: string; unita: string }[] = [
+  {
+    chiave: 'R',
+    nome: 'Relazioni di fiducia',
+    descrizione:
+      'Quanti clienti o partner riusciamo a seguire davvero nello stesso periodo, prima che la relazione si degradi.',
+    unita: 'relazioni in parallelo',
+  },
+  {
+    chiave: 'G',
+    nome: 'Decisioni con la nostra firma',
+    descrizione:
+      'Quante volte al mese qualcuno del team può mettere la faccia su una scelta: approvare, garantire, esporsi.',
+    unita: 'al mese',
+  },
+  {
+    chiave: 'B',
+    nome: 'Trattative aperte',
+    descrizione:
+      'Quante conversazioni di vendita vere possiamo tenere aperte insieme, dal primo contatto alla firma.',
+    unita: 'in parallelo',
+  },
 ];
 
 export function M0Tavolo({ urlMano }: { urlMano: string }) {
@@ -32,16 +57,20 @@ export function M0Tavolo({ urlMano }: { urlMano: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Intestazione
-        modulo="M0"
-        titolo="Setup"
-        sottotitolo="Tutto è modificabile durante il ritiro. Nessun campo blocca l'avanzamento."
-      />
+      <TestataModulo modulo="M0" />
+
+      <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+        Si compila adesso, una volta sola: chi è in stanza, cosa vendiamo oggi, cosa è scarso. Tutto resta modificabile
+        durante il ritiro e nessun campo blocca l’avanzamento.
+      </p>
 
       <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-start">
         {/* Partecipanti ------------------------------------------- */}
         <section className="pannello p-4 flex flex-col gap-2">
           <span className="etichetta">partecipanti</span>
+          <p className="m-0 mb-1 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+            Segna chi è presente e con quale ruolo siede al tavolo.
+          </p>
           {stato.partecipanti.map((p) => (
             <div key={p.id} className="flex items-center gap-2">
               <span
@@ -75,6 +104,9 @@ export function M0Tavolo({ urlMano }: { urlMano: string }) {
           ))}
           <div className="mt-2 pt-3" style={{ borderTop: '1px solid var(--line)' }}>
             <span className="etichetta">facilitatore</span>
+            <p className="m-0 mt-1 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+              Apre i round, chiude il confronto e registra le decisioni.
+            </p>
             <div className="text-[13px] mt-1">
               {/* Il Tavolo non è un partecipante: se il pid non è in lista, è lui. */}
               {stato.partecipanti.some((p) => p.id === w.facilitatoreId)
@@ -87,6 +119,9 @@ export function M0Tavolo({ urlMano }: { urlMano: string }) {
         {/* Servizi ------------------------------------------------- */}
         <section className="pannello p-4 flex flex-col gap-2">
           <span className="etichetta">servizi — fatturato ultimi 12 mesi</span>
+          <p className="m-0 mb-1 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+            Elenca i servizi venduti negli ultimi dodici mesi. Il fatturato pesa i risultati dei moduli successivi.
+          </p>
           {stato.servizi.map((s) => (
             <div key={s.id} className="flex items-center gap-2">
               <span className="text-[13px] flex-1 min-w-0 truncate">{s.nome}</span>
@@ -133,35 +168,51 @@ export function M0Tavolo({ urlMano }: { urlMano: string }) {
         <section className="pannello p-4 flex flex-col items-center gap-3">
           <span className="etichetta">accesso partecipanti</span>
           <QrCode url={urlMano} lato={140} />
+          <p className="m-0 text-[13px] text-center max-w-[16rem]" style={{ color: 'var(--ink-dim)' }}>
+            Ognuno inquadra il codice con il telefono. Dal telefono si risponde in privato, senza vedere le risposte
+            degli altri.
+          </p>
         </section>
       </div>
 
       {/* Vincoli --------------------------------------------------- */}
       <section className="pannello p-4">
-        <div className="flex items-baseline justify-between mb-3">
+        <div className="flex items-baseline justify-between gap-6">
           <span className="etichetta">le tre risorse scarse</span>
-          <div className="flex gap-1">
-            <button
-              className="bottone text-[13px]"
-              aria-pressed={!qualitativa}
-              onClick={() => invia('workshop.update', { modalitaVincoli: 'numerica', vincoli: { R: 8, G: 12, B: 5 } })}
-            >
-              numerica
-            </button>
-            <button
-              className="bottone text-[13px]"
-              aria-pressed={qualitativa}
-              onClick={() =>
-                invia('workshop.update', {
-                  modalitaVincoli: 'qualitativa',
-                  vincoli: { R: 'medio', G: 'medio', B: 'basso' },
-                })
-              }
-            >
-              qualitativa
-            </button>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex gap-1">
+              <button
+                className="bottone text-[13px]"
+                aria-pressed={!qualitativa}
+                onClick={() =>
+                  invia('workshop.update', { modalitaVincoli: 'numerica', vincoli: { R: 8, G: 12, B: 5 } })
+                }
+              >
+                numerica
+              </button>
+              <button
+                className="bottone text-[13px]"
+                aria-pressed={qualitativa}
+                onClick={() =>
+                  invia('workshop.update', {
+                    modalitaVincoli: 'qualitativa',
+                    vincoli: { R: 'medio', G: 'medio', B: 'basso' },
+                  })
+                }
+              >
+                qualitativa
+              </button>
+            </div>
+            <span className="text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+              Numerica se la cifra la conoscete, qualitativa se conviene stimarla.
+            </span>
           </div>
         </div>
+        <p className="m-0 mt-2 mb-3 text-[15px]" style={{ color: 'var(--ink)' }}>
+          Sono le tre cose che l’AI non moltiplica: restano quelle per quanto lavoro si aggiunga, e fissano quante
+          iniziative il team regge davvero. Dai un valore a ciascuna: R, G e B tornano in M6, sulla soglia di ricavi, e
+          in M8, quando il piano va diviso fra le persone.
+        </p>
         <div className="grid grid-cols-3 gap-4">
           {VINCOLI.map((v) => (
             <div key={v.chiave} className="rialzato p-3 flex flex-col gap-2">
@@ -188,16 +239,19 @@ export function M0Tavolo({ urlMano }: { urlMano: string }) {
                   ))}
                 </div>
               ) : (
-                <input
-                  className="mono text-[15px] w-20"
-                  aria-label={v.nome}
-                  type="number"
-                  min={0}
-                  value={typeof w.vincoli[v.chiave] === 'number' ? (w.vincoli[v.chiave] as number) : 0}
-                  onChange={(e) =>
-                    invia('workshop.update', { vincoli: { ...w.vincoli, [v.chiave]: Number(e.target.value) || 0 } })
-                  }
-                />
+                <div className="flex items-baseline gap-2">
+                  <input
+                    className="mono text-[15px] w-20"
+                    aria-label={`${v.nome}, ${v.unita}`}
+                    type="number"
+                    min={0}
+                    value={typeof w.vincoli[v.chiave] === 'number' ? (w.vincoli[v.chiave] as number) : 0}
+                    onChange={(e) =>
+                      invia('workshop.update', { vincoli: { ...w.vincoli, [v.chiave]: Number(e.target.value) || 0 } })
+                    }
+                  />
+                  <span className="etichetta">{v.unita}</span>
+                </div>
               )}
             </div>
           ))}
@@ -209,7 +263,8 @@ export function M0Tavolo({ urlMano }: { urlMano: string }) {
       </section>
 
       <Premessa>
-        Il tool serve al lato core. Forge entra solo come vincolo di tempo in M6 e come cappello COSTRUTTORE.
+        Il ritiro lavora sul lato core, cioè sui servizi che vendiamo oggi. Forge entra solo in due punti: come vincolo
+        di tempo in M6, revenue floor e runway, e come cappello COSTRUTTORE in discussione.
       </Premessa>
     </div>
   );
@@ -227,6 +282,13 @@ export function M0Mano() {
         <span className="etichetta">sei entrato come</span>
         <div className="text-[26px] mt-1">{io.nome}</div>
       </div>
+
+      <TestataModuloMano modulo="M0" />
+
+      <p className="m-0 text-[15px]" style={{ color: 'var(--ink)' }}>
+        Adesso non c’è niente da rispondere. Controlla che il tuo nome sia quello giusto e lascia aperta questa
+        schermata: cambia da sola quando parte il primo round.
+      </p>
 
       <div>
         <span className="etichetta">chi c’è in stanza</span>
