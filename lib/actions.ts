@@ -26,8 +26,9 @@ export type TipoEntita =
   | 'trimestre';
 
 export type Action =
-  | { type: 'participant.join'; payload: { nome: string; profilo?: Profilo; comeFacilitatore?: boolean } }
+  // L'ingresso al tavolo avviene in /api/auth: qui restano solo le mutazioni.
   | { type: 'participant.setPresence'; payload: { partecipanteId: string; presente: boolean } }
+  | { type: 'workshop.rivendicaFacilitatore'; payload: Record<string, never> }
   | { type: 'workshop.setFacilitatore'; payload: { partecipanteId: string } }
   | { type: 'workshop.update'; payload: Record<string, unknown> }
   | { type: 'session.create'; payload: { modulo: Modulo; titolo: string; soggettoId?: string; revealAnonimo?: boolean; durataS?: number } }

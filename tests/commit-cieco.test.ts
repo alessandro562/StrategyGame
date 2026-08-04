@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { ErroreGuardia, filterStateFor, verificaAzione, verificaPid } from '@/lib/guards';
+import { ErroreGuardia, filterStateFor, verificaAzione } from '@/lib/guards';
 import { statoIniziale } from '@/lib/seed';
 import type { Commit, Sessione, Store } from '@/lib/types';
 
@@ -291,33 +291,7 @@ describe('#3 anonimato M6', () => {
 });
 
 describe('identità', () => {
-  it('senza pid è 401', () => {
-    expect(() => verificaPid(statoIniziale(), null)).toThrow();
-    expect(() => verificaPid(statoIniziale(), '')).toThrow();
-  });
-
-  it('un pid malformato è 401', () => {
-    let stato = 0;
-    try {
-      verificaPid(statoIniziale(), 'pid-a-caso');
-    } catch (e) {
-      stato = (e as ErroreGuardia).stato;
-    }
-    expect(stato).toBe(401);
-  });
-
-  it('un partecipante noto passa', () => {
-    expect(verificaPid(statoIniziale(), 'p1')).toBe('p1');
-  });
-
-  it('un dispositivo appena aperto passa, così può scegliere il proprio nome', () => {
-    // Senza questa apertura nessuno riuscirebbe mai a fare join: per leggere la
-    // lista dei nomi servirebbe essere già nella lista.
-    expect(verificaPid(statoIniziale(), 'mano-a1b2c3d4')).toBe('mano-a1b2c3d4');
-    expect(verificaPid(statoIniziale(), 'tavolo-99887766')).toBe('tavolo-99887766');
-  });
-
-  it('un pid inventato non apre nessun commit altrui', () => {
+  it('un pid non riconducibile a una sessione non apre nessun commit altrui', () => {
     const store = statoIniziale();
     const s = sessioneDi(store);
     const perIntruso = filterStateFor({

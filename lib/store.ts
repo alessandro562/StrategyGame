@@ -13,6 +13,7 @@
  *   action:{actionId}             marcatore di idempotenza, TTL 1h
  */
 
+import { normalizzaEmail, type Utente } from './auth';
 import { redis } from './redis';
 import { statoIniziale } from './seed';
 import type { Commit, Store } from './types';
@@ -169,6 +170,52 @@ export async function segretoAnonimo(): Promise<string> {
   // corsa, o le etichette anonime si rimescolerebbero sotto gli occhi di tutti.
   const scritto = await r.setNx(K_SEGRETO, nuovo, 60 * 60 * 24 * 30);
   return scritto ? nuovo : ((await r.get(K_SEGRETO)) ?? nuovo);
+}
+
+/* ------------------------------------------------------------------ */
+/* Utenti e sessioni                                                   */
+/* ------------------------------------------------------------------ */
+
+const K_SEGRETO_AUTH = 'room:auth-secret';
+const K_UTENTI = 'utenti:index';
+
+function chiaveUtente(email: string) {
+  return `utente:${email}`;
+}
+
+/**
+ * Segreto per firmare le sessioni. Stessa logica del segreto anonimo: vive solo
+ * su Redis, così non serve configurare nulla su Vercel e non finisce nel
+ * repository. Se cambiasse, tutte le sessioni decadrebbero — per questo si
+ * scrive una volta sola con setNx.
+ */
+export async function segretoAuth(): Promise<string> {
+  const r = redis();
+  const esistente = await r.get(K_SEGRETO_AUTH);
+  if (esistente) return esistente;
+  const nuovo = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+  const scritto = await r.setNx(K_SEGRETO_AUTH, nuovo, 60 * 60 * 24 * 365);
+  return scritto ? nuovo : ((await r.get(K_SEGRETO_AUTH)) ?? nuovo);
+}
+
+export async function leggiUtente(email: string): Promise<Utente | null> {
+  const grezzo = await redis().get(chiaveUtente(normalizzaEmail(email)));
+  return grezzo ? (JSON.parse(grezzo) as Utente) : null;
+}
+
+export async function salvaUtente(u: Utente): Promise<void> {
+  const r = redis();
+  const k = chiaveUtente(normalizzaEmail(u.email));
+  await r.set(k, JSON.stringify(u));
+  await r.sadd(K_UTENTI, k);
+}
+
+export async function elencaUtenti(): Promise<Utente[]> {
+  const r = redis();
+  const chiavi = await r.smembers(K_UTENTI);
+  if (chiavi.length === 0) return [];
+  const grezzi = await Promise.all(chiavi.map((k) => r.get(k)));
+  return grezzi.filter((g): g is string => !!g).map((g) => JSON.parse(g) as Utente);
 }
 
 /* ------------------------------------------------------------------ */

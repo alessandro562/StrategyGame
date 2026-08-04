@@ -3,7 +3,7 @@
 Applicazione per condurre il ritiro strategico WDA del 5-6 agosto 2026.
 Implementazione di [`WDA-Strategy-Room-BUILD.md`](./WDA-Strategy-Room-BUILD.md), che resta il documento di riferimento: dove questo README e la specifica divergono, vince la specifica.
 
-Next.js 15 su Vercel, stato su Redis serverless, sincronizzazione via polling versionato. Nessun WebSocket, nessun account: si entra con il codice stanza nell'URL.
+Next.js 15 su Vercel, stato su Redis serverless, sincronizzazione via polling versionato. Nessun WebSocket.
 
 ---
 
@@ -41,9 +41,22 @@ Vuoto significa che va bene; una frase significa che serve aggiornare.
 | `/tavolo?r=ritiro` | Proiettata in sala. Mostra il QR di accesso in permanenza |
 | `/mano?r=ritiro` | I dispositivi dei partecipanti |
 
-Il primo Tavolo che si apre prende il ruolo di facilitatore. Se il ruolo è già di un altro schermo compare **Prendi il ruolo** in alto a destra: serve un gesto esplicito, così due Tavoli aperti non se lo passano avanti e indietro.
+Il primo che entra prende il ruolo di facilitatore. Se il ruolo è già di un altro schermo compare **Prendi il ruolo** in alto a destra: serve un gesto esplicito, così due Tavoli aperti non se lo passano avanti e indietro.
 
 Il pannello facilitatore si apre dal bottone in alto a destra o con `Cmd/Ctrl+F`.
+
+**Dimensione della vista di sala.** In alto a destra, `A−` / `A+`. Il Tavolo sta a tre metri dalle persone, non a cinquanta centimetri, e nessun valore fisso va bene per tutti i proiettori: si regola una volta in sala e resta. La preferenza è locale allo schermo.
+
+## Accessi
+
+Ogni persona entra con **email e password**, volutamente leggere: nessuna verifica via mail, nessun requisito di complessità, minimo quattro caratteri. Al primo ingresso si sceglie il proprio nome dalla lista con un tocco — l'account prende quel posto al tavolo invece di aggiungerne un settimo.
+
+Due cose però non sono negoziabili, e non costano nulla:
+
+- **le password non esistono mai in chiaro** (scrypt con sale per utente, confronto a tempo costante);
+- **l'identità viene dal cookie di sessione firmato dal server, mai da un parametro nell'URL**. Prima bastava cambiare un campo JSON per presentarsi come chiunque; ora il commit cieco poggia su una base vera. Il punto unico da cui si ricava chi sta parlando è `lib/sessione.ts`.
+
+Il segreto di firma vive su Redis e si crea da solo: non serve configurare nulla su Vercel.
 
 ---
 
@@ -59,17 +72,17 @@ Il pannello facilitatore si apre dal bottone in alto a destra o con `Cmd/Ctrl+F`
 
 **Il seme dell'anonimato è un segreto di server** (`room:anon-secret`), non l'id di sessione. L'id di sessione e la lista dei partecipanti sono entrambi pubblici e la funzione di mescolamento è nel bundle: derivare la permutazione da quelli renderebbe M6 de-anonimizzabile con gli strumenti di sviluppo. La specifica chiede che l'anonimato sia garantito lato server, non nell'interfaccia.
 
-Il `pid` è identità, non autorizzazione: un pid inventato non apre nessuna porta, perché chi non possiede un commit non lo riceve. Il controllo vero è il filtro.
+Le due difese sono indipendenti e si sommano: l'autenticazione stabilisce **chi** sei, il filtro decide **cosa** ti arriva. Anche riuscendo a presentarsi come un altro non si otterrebbe nulla di più, perché il filtro consegna solo ciò che quella persona possiede.
 
 ---
 
 ## Test
 
 ```bash
-npm test               # 70 test unitari
+npm test               # 87 test unitari
 ```
 
-Coprono i punti di §11.1: commit cieco verificato **sulla stringa JSON grezza**, immutabilità dopo il reveal, anonimato di M6, idempotenza, sei commit simultanei, lock ottimistico, residuo con quote che non sommano a 100 e con pareggi, flussi distinti con archi duplicati, chiusura di M8, export con dati parziali.
+Coprono i punti di §11.1 più gli accessi: password mai in chiaro, sessioni non falsificabili, commit cieco verificato **sulla stringa JSON grezza**, immutabilità dopo il reveal, anonimato di M6, idempotenza, sei commit simultanei, lock ottimistico, residuo con quote che non sommano a 100 e con pareggi, flussi distinti con archi duplicati, chiusura di M8, export con dati parziali.
 
 ### Prova generale
 
@@ -78,7 +91,7 @@ npm run build && npm start &
 BASE=http://127.0.0.1:3000 npm run prova
 ```
 
-61 controlli sul ciclo completo contro il server HTTP reale, su una stanza vergine. **Prima di partire per la sede, ripeterla contro il deploy di produzione da rete mobile, con almeno due dispositivi fisici diversi.** È l'unico test che verifica davvero le condizioni del ritiro: un deploy che funziona in ufficio e non in sede è il fallimento più stupido possibile.
+65 controlli sul ciclo completo contro il server HTTP reale, su una stanza vergine. **Prima di partire per la sede, ripeterla contro il deploy di produzione da rete mobile, con almeno due dispositivi fisici diversi.** È l'unico test che verifica davvero le condizioni del ritiro: un deploy che funziona in ufficio e non in sede è il fallimento più stupido possibile.
 
 ```bash
 BASE=https://<progetto>.vercel.app npm run prova
@@ -105,6 +118,14 @@ Il sistema visivo resta quello della specifica — control room densa e scura, u
 Sui fondi scuri si usa la variante bianca del logo; la blu resta per superfici chiare (stampe, export).
 
 Tipografia: stack di sistema, nessun font scaricato (**mai Inter, mai Roboto**). Tutti i numeri in mono con cifre tabulari: non ballano mentre si aggiornano, ed è da lì che viene la percezione di strumentazione.
+
+### Leggibilità e ritmo
+
+Il documento vieta badge, punti, livelli e celebrazioni: con un team senior bruciano la credibilità in un minuto. Il coinvolgimento quindi non viene da lì, ma dal sapere sempre tre cose — in che punto siamo, cosa ci si aspetta da me, quanto manca:
+
+- una **fascia di fase** su entrambe le viste dice cosa sta succedendo adesso e cosa tocca a chi guarda;
+- durante il `COMMIT` il Tavolo mostra il **tempo che resta, grande**, e le **domande dei cappelli** — che sono esattamente ciò a cui le persone dovrebbero pensare mentre decidono. Prima quello schermo era quasi vuoto, proprio nel momento in cui tutti lo guardavano;
+- i toni di grigio del testo secondario sono stati alzati: su un proiettore, e su uno schermo lucido in una stanza illuminata, i valori della prima stesura sparivano.
 
 ---
 
