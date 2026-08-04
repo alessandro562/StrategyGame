@@ -12,7 +12,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { Action, ActionEnvelope } from '@/lib/actions';
-import { ErroreGuardia, verificaAzione, verificaPid, verificaStanza } from '@/lib/guards';
+import { ErroreGuardia, verificaAzione, verificaStanza } from '@/lib/guards';
+import { pidRichiesto } from '@/lib/sessione';
 import { applica } from '@/lib/handlers';
 import {
   ConflittoDiScrittura,
@@ -41,19 +42,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ errore: 'corpo non valido' }, { status: 400 });
   }
 
-  const { actionId, pid, type, payload } = busta;
+  const { actionId, type, payload } = busta;
   if (!actionId || !type) {
     return NextResponse.json({ errore: 'actionId e type sono obbligatori' }, { status: 400 });
   }
 
   try {
+    // Chi agisce lo decide il cookie firmato, non il corpo della richiesta:
+    // altrimenti basterebbe cambiare un campo JSON per votare al posto di un
+    // altro, o per farsi passare per il facilitatore.
+    const pidValido = await pidRichiesto(req);
     const { state } = await caricaStato();
     verificaStanza(state, req.nextUrl.searchParams.get('r'));
-
-    // participant.join è l'unica azione che può arrivare da un pid non ancora
-    // noto: è il momento in cui il pid entra nel tavolo.
-    const pidValido = type === 'participant.join' ? (pid ?? '') : verificaPid(state, pid);
-    if (!pidValido) return NextResponse.json({ errore: 'pid mancante' }, { status: 401 });
 
     const azione = { type, payload } as Action;
     verificaAzione(state, pidValido, azione);

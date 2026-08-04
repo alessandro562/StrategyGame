@@ -9,12 +9,14 @@
  * Non mostra mai dati aggregati durante la fase COMMIT.
  */
 
-import { Suspense } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CODICE_STANZA_DEFAULT } from '@/lib/seed';
 import { CtxStore, useContestoMemo, useStore } from '@/net/useStore';
-import { reimpostaIdentita, usaPid, usePolling } from '@/net/usePolling';
+import { esci, usePolling } from '@/net/usePolling';
 import { ConnectionBanner } from '@/components/ConnectionBanner';
+import { Entra } from '@/components/Entra';
+import { FaseMano } from '@/components/FasciaFase';
 import { HatBadge } from '@/components/HatBadge';
 import { Monogramma } from '@/components/Logo';
 import { Timer } from '@/components/Timer';
@@ -41,9 +43,13 @@ export default function Pagina() {
 function Mano() {
   const params = useSearchParams();
   const stanza = params.get('r') ?? CODICE_STANZA_DEFAULT;
-  const pid = usaPid('mano');
-  const polling = usePolling(pid, 'mano', stanza);
+  const polling = usePolling('mano', stanza);
   const ctx = useContestoMemo(polling);
+  const nomi = useNomiLiberi(polling.nonAutenticato);
+
+  if (polling.nonAutenticato) {
+    return <Entra onEntrato={polling.riprendi} nomiSuggeriti={nomi} />;
+  }
 
   return (
     <CtxStore.Provider value={ctx}>
@@ -63,6 +69,10 @@ function Mano() {
           </div>
         )}
 
+        <div className="shrink-0">
+          <FaseMano sessione={ctx.sessioneAttiva} />
+        </div>
+
         <main className="flex-1 min-h-0 flex flex-col">
           <VistaModulo />
         </main>
@@ -71,13 +81,26 @@ function Mano() {
           <span className="etichetta">
             {ctx.sessioneAttiva ? `${ctx.sessioneAttiva.modulo} · ${ctx.sessioneAttiva.stato}` : 'in attesa'}
           </span>
-          <button className="etichetta" onClick={() => reimpostaIdentita('mano')}>
-            cambia identità
+          <button className="etichetta" onClick={() => void esci('mano')}>
+            esci
           </button>
         </footer>
       </div>
     </CtxStore.Provider>
   );
+}
+
+/** I nomi dei posti liberi, per far scegliere con un tocco invece di digitare. */
+function useNomiLiberi(serve: boolean): string[] {
+  const [nomi, setNomi] = useState<string[]>([]);
+  useEffect(() => {
+    if (!serve) return;
+    void fetch('/api/auth')
+      .then((r) => r.json())
+      .then((d: { nomi?: string[] }) => setNomi(d.nomi ?? []))
+      .catch(() => setNomi([]));
+  }, [serve]);
+  return nomi;
 }
 
 function VistaModulo() {

@@ -217,38 +217,12 @@ export function applica(ctx: Contesto, azione: Action): void {
   const { state, pid, ora } = ctx;
 
   switch (azione.type) {
-    case 'participant.join': {
-      const { nome, profilo, comeFacilitatore } = azione.payload;
-
-      // Il Tavolo si presenta per rivendicare il ruolo, non per sedersi al
-      // tavolo: non entra nella lista dei partecipanti, altrimenti falserebbe
-      // ogni "4 su 6" e ogni distribuzione di cappelli.
-      if (comeFacilitatore && !state.partecipanti.some((x) => x.id === pid)) {
-        state.workshop.facilitatoreId = pid;
-        return;
-      }
-
-      let p = state.partecipanti.find((x) => x.nome.toLowerCase() === nome.trim().toLowerCase());
-      if (!p) {
-        p = {
-          id: pid,
-          nome: nome.trim(),
-          profilo: profilo ?? 'operativo',
-          presente: true,
-          socketConnesso: true,
-        };
-        state.partecipanti.push(p);
-      } else {
-        // Chi rientra dopo un cambio di dispositivo riprende la propria identità.
-        p.id = pid;
-        p.presente = true;
-        if (profilo) p.profilo = profilo;
-      }
-      if (comeFacilitatore || state.workshop.facilitatoreId === null) {
-        state.workshop.facilitatoreId = pid;
-      }
+    // Chiunque sia autenticato può prendere il timone: in una stanza di sei
+    // persone è la regola più semplice che funziona, e serve quando il
+    // portatile del facilitatore muore a metà pomeriggio.
+    case 'workshop.rivendicaFacilitatore':
+      state.workshop.facilitatoreId = pid;
       return;
-    }
 
     case 'participant.setPresence': {
       const p = state.partecipanti.find((x) => x.id === azione.payload.partecipanteId);

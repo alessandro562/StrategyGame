@@ -26,7 +26,6 @@ export const CADENZE = {
 
 interface AzioneInCoda {
   actionId: string;
-  pid: string;
   type: Action['type'];
   payload: Record<string, unknown>;
 }
@@ -66,11 +65,15 @@ export interface Polling {
   /** Differenza fra orologio server e orologio locale, in ms. */
   scarto: number;
   ora: () => number;
+  /** Sessione assente o scaduta: la vista deve mostrare la schermata d'ingresso. */
+  nonAutenticato: boolean;
+  /** Da chiamare dopo un accesso riuscito, per ripartire subito. */
+  riprendi: () => void;
 }
 
-export function usePolling(pid: string, ruolo: Ruolo, stanza: string): Polling {
+export function usePolling(ruolo: Ruolo, stanza: string): Polling {
   const chiaveCache = `wda:cache:${ruolo}`;
-  const chiaveCoda = `wda:coda:${pid}`;
+  const chiaveCoda = `wda:coda:${ruolo}`;
 
   const [stato, setStato] = useState<StatoFiltrato | null>(() => leggiLS<StatoFiltrato | null>(chiaveCache, null));
   const [version, setVersion] = useState(-1);
@@ -78,6 +81,7 @@ export function usePolling(pid: string, ruolo: Ruolo, stanza: string): Polling {
   const [inCoda, setInCoda] = useState(0);
   const [soloLettura, setSoloLettura] = useState(true);
   const [scarto, setScarto] = useState(0);
+  const [nonAutenticato, setNonAutenticato] = useState(false);
 
   const statoRef = useRef<StatoFiltrato | null>(null);
   const versionRef = useRef(-1);
@@ -85,6 +89,7 @@ export function usePolling(pid: string, ruolo: Ruolo, stanza: string): Polling {
   const codaRef = useRef<AzioneInCoda[]>([]);
   const inVoloRef = useRef(false);
   const forzaRef = useRef(false);
+  const nonAutenticatoRef = useRef(false);
 
   useEffect(() => {
     codaRef.current = leggiLS<AzioneInCoda[]>(chiaveCoda, []);
@@ -123,18 +128,22 @@ export function usePolling(pid: string, ruolo: Ruolo, stanza: string): Polling {
 
   const invia = useCallback(
     (type: Action['type'], payload: Record<string, unknown> = {}) => {
-      codaRef.current.push({ actionId: uuid(), pid, type, payload });
+      codaRef.current.push({ actionId: uuid(), type, payload });
       salvaCoda();
       forzaRef.current = true;
       void svuotaCoda().then((ok) => {
         if (ok) forzaRef.current = true;
       });
     },
-    [pid, salvaCoda, svuotaCoda],
+    [salvaCoda, svuotaCoda],
   );
 
+  const riprendi = useCallback(() => {
+    setNonAutenticato(false);
+    forzaRef.current = true;
+  }, []);
+
   useEffect(() => {
-    if (!pid) return;
     let vivo = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -156,7 +165,6 @@ export function usePolling(pid: string, ruolo: Ruolo, stanza: string): Polling {
         const q = new URLSearchParams({
           v: String(versionRef.current),
           pv: presenceRef.current,
-          pid,
           role: ruolo,
           r: stanza,
         });
@@ -167,7 +175,13 @@ export function usePolling(pid: string, ruolo: Ruolo, stanza: string): Polling {
           setSoloLettura(false);
           return;
         }
-        if (res.status === 401 || res.status === 404) {
+        if (res.status === 401) {
+          // Nessuna sessione: non è un errore di rete, è che devi entrare.
+          setNonAutenticato(true);
+          setRete('connesso');
+          return;
+        }
+        if (res.status === 404) {
           setRete('errore');
           return;
         }
@@ -184,6 +198,7 @@ export function usePolling(pid: string, ruolo: Ruolo, stanza: string): Polling {
         setStato(dati.state);
         setScarto(dati.state.serverNow - Date.now());
         setSoloLettura(false);
+        setNonAutenticato(false);
         setRete(codaVuota ? 'connesso' : 'offline');
         scriviLS(chiaveCache, dati.state);
       } catch {
@@ -197,7 +212,8 @@ export function usePolling(pid: string, ruolo: Ruolo, stanza: string): Polling {
     const ciclo = async () => {
       await giro();
       if (!vivo) return;
-      const attesa = forzaRef.current ? 60 : cadenza();
+      // Senza sessione non ha senso martellare: si aspetta l'accesso.
+      const attesa = forzaRef.current ? 60 : nonAutenticatoRef.current ? 3000 : cadenza();
       forzaRef.current = false;
       timer = setTimeout(ciclo, attesa);
     };
@@ -220,30 +236,28 @@ export function usePolling(pid: string, ruolo: Ruolo, stanza: string): Polling {
       document.removeEventListener('visibilitychange', suVisibilita);
       window.removeEventListener('online', suVisibilita);
     };
-  }, [pid, ruolo, stanza, chiaveCache, svuotaCoda]);
+  }, [ruolo, stanza, chiaveCache, svuotaCoda]);
+
+  useEffect(() => {
+    nonAutenticatoRef.current = nonAutenticato;
+  }, [nonAutenticato]);
 
   const ora = useCallback(() => Date.now() + scarto, [scarto]);
 
-  return { stato, version, rete, inCoda, soloLettura, invia, scarto, ora };
+  return { stato, version, rete, inCoda, soloLettura, invia, scarto, ora, nonAutenticato, riprendi };
 }
 
-/** Identità del dispositivo, stabile fra ricariche. */
-export function usaPid(ruolo: Ruolo): string {
-  const [pid, setPid] = useState('');
-  useEffect(() => {
-    const chiave = `wda:pid:${ruolo}`;
-    let v = window.localStorage.getItem(chiave);
-    if (!v) {
-      v = ruolo === 'tavolo' ? `tavolo-${uuid().slice(0, 8)}` : `mano-${uuid().slice(0, 8)}`;
-      window.localStorage.setItem(chiave, v);
-    }
-    setPid(v);
-  }, [ruolo]);
-  return pid;
-}
-
-export function reimpostaIdentita(ruolo: Ruolo): void {
-  window.localStorage.removeItem(`wda:pid:${ruolo}`);
-  window.localStorage.removeItem(`wda:cache:${ruolo}`);
-  window.location.reload();
+/** Chiude la sessione e ripulisce la cache locale di questa vista. */
+export async function esci(ruolo: Ruolo): Promise<void> {
+  try {
+    await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ azione: 'esci' }),
+    });
+  } finally {
+    window.localStorage.removeItem(`wda:cache:${ruolo}`);
+    window.localStorage.removeItem(`wda:coda:${ruolo}`);
+    window.location.reload();
+  }
 }

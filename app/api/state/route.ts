@@ -1,15 +1,17 @@
 /**
- * GET /api/state?v={versione}&pv={firmaPresenza}&pid={partecipanteId}&r={codiceStanza}
+ * GET /api/state?v={versione}&pv={firmaPresenza}&r={codiceStanza}
  *
  *   204  versione e presenza invariate, nessun corpo
  *   200  { version, presence, state }  — state esce SOLO da filterStateFor()
- *   401  pid mancante o sconosciuto
+ *   401  sessione mancante o scaduta
  *
+ * L'identità arriva dal cookie firmato, non dalla query string.
  * Questa route non serializza mai lo Store direttamente.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ErroreGuardia, filterStateFor, verificaPid, verificaStanza } from '@/lib/guards';
+import { ErroreGuardia, filterStateFor, verificaStanza } from '@/lib/guards';
+import { pidRichiesto } from '@/lib/sessione';
 import { transizioniPigre } from '@/lib/handlers';
 import {
   caricaCommits,
@@ -27,15 +29,14 @@ export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams;
-  const pid = q.get('pid');
   const ruolo: Ruolo = q.get('role') === 'tavolo' ? 'tavolo' : 'mano';
   const vClient = Number(q.get('v') ?? '-1');
   const pvClient = q.get('pv') ?? '';
 
   try {
+    const pidValido = await pidRichiesto(req);
     let { version, state } = await caricaStato();
     verificaStanza(state, q.get('r'));
-    const pidValido = verificaPid(state, pid);
 
     // La presenza si deduce dal polling: nessuna connessione persistente (§9).
     await segnalaPresenza(pidValido);

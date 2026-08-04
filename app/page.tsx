@@ -5,8 +5,16 @@ import { redisEffimero } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 
+const variabiliAttese = [
+  'UPSTASH_REDIS_REST_URL',
+  'UPSTASH_REDIS_REST_TOKEN',
+  'KV_REST_API_URL',
+  'KV_REST_API_TOKEN',
+];
+
 export default function Home() {
   const effimero = redisEffimero();
+  const presenti = variabiliAttese.filter((v) => !!process.env[v]);
 
   return (
     <main className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--bg-deep)' }}>
@@ -26,8 +34,8 @@ export default function Home() {
         </div>
 
         <p className="m-0 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-          I partecipanti entrano scansionando il QR mostrato in permanenza sul Tavolo. Nessun account, nessuna
-          password: solo il codice stanza nell&apos;URL.
+          I partecipanti entrano scansionando il QR mostrato in permanenza sul Tavolo. Al primo ingresso si
+          registrano con email e password, e scelgono il proprio nome dalla lista.
         </p>
 
         {effimero && (
@@ -40,6 +48,28 @@ export default function Home() {
               ritiro. Collega Upstash dal marketplace Vercel e <strong>rifai il deploy</strong> — le variabili si
               leggono all’avvio.
             </p>
+
+            {/* Quali nomi il server vede davvero. Solo i nomi, mai i valori:
+                serve a distinguere "database non collegato" da "collegato al
+                progetto sbagliato" o "variabile solo su Preview", che dalla
+                dashboard si confondono facilmente. */}
+            <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--line)' }}>
+              <div className="etichetta mb-1">variabili viste dal server</div>
+              <div className="flex flex-col gap-1">
+                {variabiliAttese.map((v) => {
+                  const c = presenti.includes(v);
+                  return (
+                    <span key={v} className="mono text-[11px]" style={{ color: c ? 'var(--live)' : 'var(--ink-faint)' }}>
+                      {c ? '●' : '○'} {v}
+                    </span>
+                  );
+                })}
+              </div>
+              <p className="m-0 mt-2 text-[11px]" style={{ color: 'var(--ink-faint)' }}>
+                Tutte spente: il database non è collegato a questo progetto, oppure le variabili esistono solo su
+                Preview e non su Production.
+              </p>
+            </div>
           </div>
         )}
 

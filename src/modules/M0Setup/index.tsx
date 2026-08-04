@@ -210,51 +210,46 @@ export function M0Tavolo({ urlMano }: { urlMano: string }) {
 
 export function M0Mano() {
   const { stato, invia, io } = useStore();
-  const [scelto, setScelto] = useState<string | null>(null);
-  if (!stato) return null;
+  if (!stato || !io) return null;
 
-  if (io) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3">
-        <span className="etichetta">sei collegato come</span>
-        <div className="text-[24px]">{io.nome}</div>
-        <button
-          className="bottone text-[12px]"
-          onClick={() => invia('participant.setPresence', { partecipanteId: io.id, presente: !io.presente })}
-        >
-          {io.presente ? 'Segnalati assente' : 'Segnalati presente'}
-        </button>
-      </div>
-    );
-  }
+  const collegati = stato.partecipanti.filter((p) => p.socketConnesso).length;
 
   return (
-    <div className="flex-1 flex flex-col gap-3">
+    <div className="flex-1 flex flex-col gap-5">
+      <div className="rialzato p-4" style={{ borderColor: 'var(--wda-deep)' }}>
+        <span className="etichetta">sei entrato come</span>
+        <div className="text-[26px] mt-1">{io.nome}</div>
+      </div>
+
       <div>
-        <h2 className="m-0 text-[17px] font-normal">Chi sei?</h2>
-        <p className="m-0 mt-1 text-[13px]" style={{ color: 'var(--ink-dim)' }}>
-          Scegli il tuo nome dalla lista.
+        <span className="etichetta">chi c’è in stanza</span>
+        <div className="flex flex-col gap-1 mt-2">
+          {stato.partecipanti.map((p) => (
+            <div key={p.id} className="flex items-center gap-2 py-1">
+              <span
+                className="inline-block w-2 h-2 shrink-0"
+                style={{ background: p.socketConnesso ? 'var(--live)' : 'var(--line-strong)' }}
+              />
+              <span className="text-[15px]" style={{ color: p.socketConnesso ? 'var(--ink)' : 'var(--ink-faint)' }}>
+                {p.nome}
+              </span>
+              {p.id === io.id && <span className="etichetta">tu</span>}
+              {!p.presente && <span className="etichetta" style={{ color: 'var(--tension)' }}>assente</span>}
+            </div>
+          ))}
+        </div>
+        <p className="m-0 mt-2 text-[12px]" style={{ color: 'var(--ink-faint)' }}>
+          {collegati} di {stato.partecipanti.length} collegati. Il round parte quando lo apre chi facilita.
         </p>
       </div>
-      <div className="flex flex-col gap-2">
-        {stato.partecipanti.map((p) => (
-          <button
-            key={p.id}
-            className="text-left px-4"
-            style={{
-              minHeight: 52,
-              border: `1px solid ${scelto === p.nome ? 'var(--wda-bright)' : 'var(--line-strong)'}`,
-              background: scelto === p.nome ? 'var(--wda-wash)' : 'var(--bg-raised)',
-            }}
-            onClick={() => {
-              setScelto(p.nome);
-              invia('participant.join', { nome: p.nome });
-            }}
-          >
-            {p.nome}
-          </button>
-        ))}
-      </div>
+
+      <button
+        className="bottone self-start text-[14px]"
+        style={{ minHeight: 44 }}
+        onClick={() => invia('participant.setPresence', { partecipanteId: io.id, presente: !io.presente })}
+      >
+        {io.presente ? 'Segnalati assente' : 'Segnalati presente'}
+      </button>
     </div>
   );
 }

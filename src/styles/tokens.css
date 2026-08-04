@@ -20,9 +20,18 @@
   --line: #242a33;
   --line-strong: #38414e;
 
-  --ink: #e6e8eb;
-  --ink-dim: #8b939f;
-  --ink-faint: #5a626d;
+  --ink: #e9ebee;
+  /* Alzati rispetto alla prima stesura: su un proiettore, e su uno schermo
+     lucido in una stanza illuminata, #8b939f e #5a626d sparivano. */
+  --ink-dim: #9ba3af;
+  --ink-faint: #7b838f;
+
+  /* Fattore di ingrandimento della vista di sala. Il Tavolo sta a tre metri
+     dalle persone, non a cinquanta centimetri: la stessa interfaccia che è
+     giusta su un portatile è illeggibile proiettata. Si regola in sala con i
+     due bottoni in alto, perché nessun valore fisso va bene per tutti i
+     proiettori. */
+  --scala: 1;
 
   /* Marchio WDA */
   --wda: #3d6c92;
@@ -126,11 +135,20 @@ select:focus {
 }
 
 .etichetta {
-  font-size: 10px;
-  letter-spacing: 0.14em;
+  font-size: 11px;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--ink-faint);
   font-family: var(--font-mono);
+}
+
+/**
+ * Vista di sala ingrandita. `zoom` invece di `transform: scale()` perché
+ * ricalcola il layout invece di stirare i pixel: il testo resta nitido e non
+ * compaiono barre di scorrimento oblique.
+ */
+.sala {
+  zoom: var(--scala);
 }
 
 .bottone {

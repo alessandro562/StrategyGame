@@ -10,8 +10,11 @@ import { useSearchParams } from 'next/navigation';
 import { daRiconvalidare, indicatori, storicoCappelli } from '@/lib/calc';
 import { CODICE_STANZA_DEFAULT } from '@/lib/seed';
 import { CtxStore, useContestoMemo, useStore } from '@/net/useStore';
-import { usaPid, usePolling } from '@/net/usePolling';
+import { esci, usePolling } from '@/net/usePolling';
+import { AttesaCommit } from '@/components/AttesaCommit';
 import { ConnectionBanner } from '@/components/ConnectionBanner';
+import { Entra } from '@/components/Entra';
+import { FasciaFase } from '@/components/FasciaFase';
 import { FacilitatorPanel } from '@/components/FacilitatorPanel';
 import { MappaCappelli } from '@/components/HatBadge';
 import { IndicatorStrip } from '@/components/IndicatorStrip';
@@ -42,12 +45,12 @@ export default function Pagina() {
 function Tavolo() {
   const params = useSearchParams();
   const stanza = params.get('r') ?? CODICE_STANZA_DEFAULT;
-  const pid = usaPid('tavolo');
-  const polling = usePolling(pid, 'tavolo', stanza);
+  const polling = usePolling('tavolo', stanza);
   const { invia } = polling;
   const ctx = useContestoMemo(polling);
   const [pannello, setPannello] = useState(false);
   const [urlMano, setUrlMano] = useState('');
+  const [scala, setScala] = useScalaSala();
 
   useEffect(() => {
     setUrlMano(`${window.location.origin}/mano?r=${encodeURIComponent(stanza)}`);
@@ -63,10 +66,10 @@ function Tavolo() {
   useEffect(() => {
     // Una volta sola: la rivendicazione impiega un giro di polling ad arrivare,
     // e nel frattempo ogni render rimetterebbe in coda la stessa azione.
-    if (!pid || !senzaFacilitatore || rivendicato.current) return;
+    if (!senzaFacilitatore || rivendicato.current) return;
     rivendicato.current = true;
-    invia('participant.join', { nome: 'Tavolo', comeFacilitatore: true });
-  }, [pid, senzaFacilitatore, invia]);
+    invia('workshop.rivendicaFacilitatore', {});
+  }, [senzaFacilitatore, invia]);
 
   useEffect(() => {
     const suTasto = (e: KeyboardEvent) => {
@@ -97,9 +100,18 @@ function Tavolo() {
   const riaperture = useMemo(() => (s ? daRiconvalidare(s.lock) : { riaperti: [], aValle: [] }), [s]);
   const storico = useMemo(() => (s ? storicoCappelli(s.sessioni) : {}), [s]);
 
+  // Dopo tutti gli hook, mai prima: l'ordine degli hook non può cambiare fra un
+  // render e l'altro.
+  if (polling.nonAutenticato) {
+    return <Entra onEntrato={polling.riprendi} />;
+  }
+
   return (
     <CtxStore.Provider value={ctx}>
-      <div className="h-screen flex flex-col" style={{ background: 'var(--bg-deep)' }}>
+      <div
+        className="h-screen flex flex-col sala"
+        style={{ background: 'var(--bg-deep)', ['--scala' as string]: scala }}
+      >
         {/* Barra superiore: timer onnipresente, marchio, stato rete */}
         <header
           className="flex items-center gap-6 px-5 py-3 shrink-0"
@@ -115,11 +127,12 @@ function Tavolo() {
           )}
           <Timer sessione={sessione} ora={polling.ora} />
           <ConnectionBanner rete={polling.rete} inCoda={polling.inCoda} soloLettura={polling.soloLettura} />
+          <ControlloScala scala={scala} setScala={setScala} />
           {facilitatoreAltrove && (
             <button
               className="bottone text-[12px]"
               style={{ borderColor: 'var(--tension)', color: 'var(--tension)' }}
-              onClick={() => polling.invia('participant.join', { nome: 'Tavolo', comeFacilitatore: true })}
+              onClick={() => polling.invia('workshop.rivendicaFacilitatore', {})}
             >
               Prendi il ruolo
             </button>
@@ -129,11 +142,12 @@ function Tavolo() {
           </button>
         </header>
 
-        {ind && (
-          <div className="px-5 py-2 shrink-0">
-            <IndicatorStrip i={ind} />
+        <div className="px-5 pt-3 pb-2 shrink-0 flex gap-3 items-stretch flex-wrap">
+          <div className="flex-1 min-w-[420px]">
+            <FasciaFase sessione={sessione} ruolo="tavolo" />
           </div>
-        )}
+          {ind && <IndicatorStrip i={ind} />}
+        </div>
 
         {riaperture.riaperti.length > 0 && (
           <div className="px-5 pb-2 shrink-0">
@@ -146,13 +160,19 @@ function Tavolo() {
         )}
 
         <div className="flex-1 min-h-0 flex gap-4 px-5 pb-4">
-          <main className="flex-1 min-w-0 overflow-y-auto barra-scorrimento">
+          <main className="flex-1 min-w-0 overflow-y-auto barra-scorrimento flex flex-col gap-4">
             {!s ? (
               <Vuoto>Collegamento in corso…</Vuoto>
             ) : !sessione ? (
               <M0Tavolo urlMano={urlMano} />
             ) : (
-              <VistaModulo />
+              <>
+                <VistaModulo />
+                {/* M5 ha già il proprio timer dominante: non se ne mostrano due. */}
+                {sessione.stato === 'COMMIT' && sessione.modulo !== 'M5' && (
+                  <AttesaCommit sessione={sessione} ora={polling.ora} nome={ctx.nome} />
+                )}
+              </>
             )}
           </main>
 
@@ -179,6 +199,53 @@ function Tavolo() {
         {pannello && <FacilitatorPanel ctx={ctx} chiudi={() => setPannello(false)} />}
       </div>
     </CtxStore.Provider>
+  );
+}
+
+/**
+ * Ingrandimento della vista di sala, regolabile e ricordato.
+ * Nessun valore fisso va bene: dipende da quanto è grande il muro e da quanto
+ * lontano siedono le persone, e lo si scopre solo una volta lì.
+ */
+function useScalaSala(): [number, (v: number) => void] {
+  const [scala, setScalaStato] = useState(1);
+  useEffect(() => {
+    const salvata = Number(window.localStorage.getItem('wda:scala') ?? '1');
+    if (salvata >= 0.8 && salvata <= 2) setScalaStato(salvata);
+  }, []);
+  const setScala = (v: number) => {
+    const limitata = Math.min(2, Math.max(0.8, Number(v.toFixed(2))));
+    setScalaStato(limitata);
+    window.localStorage.setItem('wda:scala', String(limitata));
+  };
+  return [scala, setScala];
+}
+
+function ControlloScala({ scala, setScala }: { scala: number; setScala: (v: number) => void }) {
+  return (
+    <div className="flex items-center gap-1" title="Dimensione della vista di sala">
+      <button
+        className="bottone text-[13px]"
+        style={{ padding: '4px 9px' }}
+        onClick={() => setScala(scala - 0.1)}
+        disabled={scala <= 0.8}
+        aria-label="Riduci la vista"
+      >
+        A−
+      </button>
+      <span className="mono text-[11px] w-9 text-center" style={{ color: 'var(--ink-faint)' }}>
+        {Math.round(scala * 100)}%
+      </span>
+      <button
+        className="bottone text-[13px]"
+        style={{ padding: '4px 9px' }}
+        onClick={() => setScala(scala + 0.1)}
+        disabled={scala >= 2}
+        aria-label="Ingrandisci la vista"
+      >
+        A+
+      </button>
+    </div>
   );
 }
 

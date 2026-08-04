@@ -202,29 +202,15 @@ export function filterStateFor(input: IngressoFiltro): StatoFiltrato {
 /* Validazione delle azioni (§6.2)                                     */
 /* ------------------------------------------------------------------ */
 
-/** Id generato dal client al primo avvio e conservato in localStorage. */
-const FORMA_PID = /^(mano|tavolo)-[a-z0-9-]{4,64}$/;
-
 /**
- * Il pid è identità, non autorizzazione.
- *
- * Un pid inventato non apre nessuna porta: chi non possiede un commit non lo
- * riceve, e chi si presenta come Tavolo durante COMMIT non riceve alcun commit
- * — il controllo vero è filterStateFor(), non questa funzione. Qui si respinge
- * il rumore e si lascia passare il caso che deve funzionare in sala: un
- * dispositivo appena aperto che non ha ancora scelto il proprio nome.
- *
- * Senza questa apertura il prodotto si blocca al primo minuto: per fare join
- * bisogna leggere la lista dei nomi, e per leggerla bisognerebbe aver già fatto
- * join.
+ * L'identità arriva dal cookie di sessione firmato dal server (lib/sessione.ts),
+ * non da un parametro nell'URL: presentarsi come qualcun altro richiederebbe il
+ * segreto di firma. Il commit cieco poggia comunque su filterStateFor, che
+ * consegna a ciascuno solo ciò che possiede — l'autenticazione rende quel
+ * "ciascuno" una persona vera invece di una stringa che il client si sceglie.
  */
-export function verificaPid(state: Store, pid: string | null): string {
-  if (!pid) throw new ErroreGuardia(401, 'pid mancante');
-  const noto =
-    state.partecipanti.some((p) => p.id === pid) || state.workshop.facilitatoreId === pid;
-  if (!noto && !FORMA_PID.test(pid)) {
-    throw new ErroreGuardia(401, 'pid sconosciuto');
-  }
+export function verificaPartecipante(state: Store, pid: string): string {
+  if (!pid) throw new ErroreGuardia(401, 'non autenticato');
   return pid;
 }
 
