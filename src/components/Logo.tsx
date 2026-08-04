@@ -14,7 +14,10 @@ export function Logo({ altezza = 20, variante = 'bianco' }: { altezza?: number; 
       src={variante === 'bianco' ? '/brand/wda-logo-white.png' : '/brand/wda-logo-blue.png'}
       alt="WDA"
       height={altezza}
-      style={{ height: altezza, width: 'auto', display: 'block' }}
+      // alignSelf: dentro un contenitore flex-col lo stretch di default allarga
+      // l'immagine a tutta la larghezza schiacciandola: qui si tiene la
+      // proporzione originale a prescindere dal contenitore in cui finisce.
+      style={{ height: altezza, width: 'auto', display: 'block', alignSelf: 'flex-start', flexShrink: 0 }}
     />
   );
 }
@@ -26,7 +29,7 @@ export function Monogramma({ altezza = 24, variante = 'blu' }: { altezza?: numbe
       alt=""
       aria-hidden
       height={altezza}
-      style={{ height: altezza, width: 'auto', display: 'block' }}
+      style={{ height: altezza, width: 'auto', display: 'block', alignSelf: 'flex-start', flexShrink: 0 }}
     />
   );
 }
