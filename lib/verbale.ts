@@ -26,7 +26,7 @@ import {
   RIGHE_QUADRO,
   VINCOLI,
 } from './glossario';
-import type { Commit, Store } from './types';
+import type { Commit, Store, VoceQuadro } from './types';
 
 function data(ts: number): string {
   return new Date(ts).toLocaleString('it-IT', {
@@ -40,6 +40,19 @@ function data(ts: number): string {
 
 function num(n: number, decimali = 0): string {
   return n.toLocaleString('it-IT', { minimumFractionDigits: decimali, maximumFractionDigits: decimali });
+}
+
+/**
+ * L'analisi dietro una carta, rientrata sotto la carta stessa.
+ *
+ * Le schede competitor sono la parte del quadro che costa di più da rifare e
+ * che si dimentica per prima: senza, il verbale riporterebbe «AIVB — venture
+ * builder AI» e chi lo rilegge fra sei mesi dovrebbe rifare la ricerca da capo.
+ */
+function scriviRetro(w: (s: string) => void, v: VoceQuadro, rientro: string): void {
+  if (!v.nota) return;
+  w(`${rientro}- ${v.nota}`);
+  if (v.url) w(`${rientro}  - Fonte: ${v.url}`);
 }
 
 export function generaVerbale(state: Store, commits: Commit[], ora = Date.now()): string {
@@ -82,16 +95,21 @@ export function generaVerbale(state: Store, commits: Commit[], ora = Date.now())
             const dellOrizzonte = voci.filter((v) => v.orizzonte === o.chiave);
             if (dellOrizzonte.length === 0) continue;
             w(`- _${o.etichetta} (${o.quando})_`);
-            for (const v of dellOrizzonte) w(`  - ${v.testo} — ${nome(v.autoreId)}`);
+            for (const v of dellOrizzonte) {
+              w(`  - ${v.testo}${v.autoreId === 'seed' ? '' : ` — ${nome(v.autoreId)}`}`);
+              scriviRetro(w, v, '    ');
+            }
           }
           for (const v of voci.filter((v) => !v.orizzonte)) {
-            w(`- ${v.testo} — ${nome(v.autoreId)}`);
+            w(`- ${v.testo}${v.autoreId === 'seed' ? '' : ` — ${nome(v.autoreId)}`}`);
+            scriviRetro(w, v, '  ');
           }
         } else {
           for (const v of voci) {
             // Le voci precaricate non hanno un autore da citare: erano il punto
             // di partenza, non il contributo di qualcuno.
             w(v.autoreId === 'seed' ? `- ${v.testo}` : `- ${v.testo} — ${nome(v.autoreId)}`);
+            scriviRetro(w, v, '  ');
           }
         }
         w('');

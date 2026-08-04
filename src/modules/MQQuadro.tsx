@@ -22,13 +22,14 @@
  * stessa riga e la colonna smette di dire qualcosa.
  */
 
-import { useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 import {
   COLONNE_QUADRO,
   MODULI,
   ORIZZONTI_QUADRO,
   RIGHE_QUADRO,
 } from '@/lib/glossario';
+import { quadroIniziale } from '@/lib/seed';
 import { useStore } from '@/net/useStore';
 import { TestataModulo } from '@/components/TestataModulo';
 import type {
@@ -42,39 +43,115 @@ import type {
 /** Le voci precaricate non hanno un autore vero: nessuna firma sotto. */
 const SEME = 'seed';
 
+/**
+ * Vero mentre una carta è in mano.
+ *
+ * Serve perché le caselle del Futuro si comportano in due modi opposti. A
+ * riposo ne compaiono solo quelle piene: tre zone vuote per riga, moltiplicate
+ * per sei righe, sono diciotto righe di nulla che spingono metà mappa sotto il
+ * bordo dello schermo. Mentre si trascina compaiono tutte e tre, perché senza
+ * un bersaglio visibile non si può mirare a un orizzonte vuoto.
+ */
+const CtxTrascino = createContext<{ attivo: boolean; imposta: (v: boolean) => void }>({
+  attivo: false,
+  imposta: () => {},
+});
+
 /* ------------------------------------------------------------------ */
 /* Tavolo                                                              */
 /* ------------------------------------------------------------------ */
 
 export function MQTavolo({ sessione }: { sessione: Sessione }) {
   const { stato } = useStore();
+  const [trascino, setTrascino] = useState(false);
   if (!stato) return null;
 
   const quadro = stato.quadro ?? [];
   const futuro = quadro.filter((v) => v.colonna === 'FUTURO');
-  const scritteDaNoi = quadro.filter((v) => v.autoreId !== SEME).length;
+  const toccate = quantoSiEMossa(quadro);
 
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
       <TestataModulo
         modulo="MQ"
+        senzaComeFunziona
         destra={
           <div className="flex items-start gap-6 shrink-0">
-            <Contatore etichetta="voci nel futuro" valore={futuro.length} acceso={futuro.length > 0} />
-            <Contatore etichetta="aggiunte oggi" valore={scritteDaNoi} />
+            <Contatore etichetta="carte nel futuro" valore={futuro.length} acceso={futuro.length > 0} />
+            <Contatore etichetta="mosse e aggiunte" valore={toccate} acceso={toccate > 0} />
           </div>
         }
       />
+
+      {/* Due righe di istruzione, e sono le uniche: senza, una griglia di carte
+          si guarda invece di toccarla, e nessuno scopre da solo che si
+          trascinano. Il «+» sulle carte competitor va detto per lo stesso
+          motivo — un'analisi che nessuno apre non è un'analisi. */}
+      <div className="flex items-center gap-5 flex-wrap text-[13px]" style={{ color: 'var(--ink-dim)' }}>
+        <span className="flex items-center gap-2">
+          <Tasto>trascina</Tasto> una carta in qualsiasi casella per riclassificarla
+        </span>
+        <span className="flex items-center gap-2">
+          <Tasto>+</Tasto> apre l’analisi dietro le carte competitor
+        </span>
+        <span className="flex items-center gap-2">
+          <Tasto>telefono</Tasto> aggiunge carte nuove
+        </span>
+      </div>
 
       {/* La tabella prende tutta l'altezza rimasta e scorre al proprio interno
           se serve. In sala non deve servire: sei righe devono stare dentro uno
           schermo, o metà del quadro è dietro una barra di scorrimento che solo
           chi ha il portatile può muovere. È il motivo per cui le voci sono
           pastiglie a capo automatico e non righe impilate. */}
-      <div className="flex-1 min-h-0 overflow-y-auto barra-scorrimento">
-        <Tabella />
+      {/* `dragend` sulla carta non scatta se il rilascio avviene fuori da una
+          zona valida in certi browser: l'ascolto sta anche qui, sul
+          contenitore, così le zone del futuro non restano aperte per sempre
+          dopo un trascinamento abbandonato. */}
+      <div
+        className="flex-1 min-h-0 overflow-y-auto barra-scorrimento"
+        onDragEnd={() => setTrascino(false)}
+        onDrop={() => setTrascino(false)}
+      >
+        <CtxTrascino.Provider value={{ attivo: trascino, imposta: setTrascino }}>
+          <Tabella />
+        </CtxTrascino.Provider>
       </div>
     </div>
+  );
+}
+
+/**
+ * Quante carte non sono più dove erano stamattina: quelle aggiunte oggi più
+ * quelle precaricate che qualcuno ha spostato.
+ *
+ * Contava solo le aggiunte, e l'etichetta diceva «mosse e aggiunte»: si poteva
+ * riclassificare mezza mappa e vedere ancora zero. Un numero che non si muove
+ * quando ci si lavora sopra è peggio di nessun numero, perché insegna a non
+ * guardarlo.
+ */
+function quantoSiEMossa(quadro: VoceQuadro[]): number {
+  const partenza = new Map(quadroIniziale().map((v) => [v.id, v]));
+  return quadro.filter((v) => {
+    const era = partenza.get(v.id);
+    if (!era) return true; // aggiunta oggi
+    return era.riga !== v.riga || era.colonna !== v.colonna || era.orizzonte !== v.orizzonte;
+  }).length;
+}
+
+function Tasto({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      className="etichetta px-2 py-0.5"
+      style={{
+        border: '1px solid var(--line-strong)',
+        borderRadius: 'var(--radius-sm)',
+        background: 'var(--bg-panel)',
+        color: 'var(--ink)',
+      }}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -202,6 +279,7 @@ function Riga({
         <Cella
           key={c.chiave}
           voci={perCella.get(`${riga.chiave}|${c.chiave}`) ?? []}
+          riga={riga.chiave}
           colonna={c.chiave}
           bordo={bordo}
         />
@@ -212,103 +290,267 @@ function Riga({
 
 function Cella({
   voci,
+  riga,
   colonna,
   bordo,
 }: {
   voci: VoceQuadro[];
+  riga: RigaQuadro;
   colonna: ColonnaQuadro;
   bordo?: string;
 }) {
   const stile = { borderBottom: bordo, borderLeft: '1px solid var(--line)' };
 
-  if (voci.length === 0) {
-    return (
-      <div className="px-3 py-2 flex items-start" style={stile}>
-        <span className="text-[13px]" style={{ color: 'var(--ink-faint)' }}>
-          {colonna === 'FUTURO' ? 'da scrivere — dai telefoni' : '—'}
-        </span>
-      </div>
-    );
-  }
-
-  // Nel futuro le voci si raggruppano per orizzonte, nelle altre colonne no:
-  // «cosa facciamo» non ha orizzonti, ha solo il presente.
+  // Nel futuro la cella si divide nei tre orizzonti, e ognuno è una zona di
+  // rilascio a sé: trascinare una carta su «entro l'anno» la classifica nel
+  // gesto stesso di spostarla, senza un secondo passaggio.
   if (colonna === 'FUTURO') {
-    const senzaQuando = voci.filter((v) => !v.orizzonte);
     return (
-      <div className="px-3 py-2 flex flex-col gap-2" style={stile}>
-        {ORIZZONTI_QUADRO.map((o) => {
-          const dellOrizzonte = voci.filter((v) => v.orizzonte === o.chiave);
-          if (dellOrizzonte.length === 0) return null;
-          return (
-            <div key={o.chiave} className="flex items-baseline gap-2">
-              {/* L'orizzonte sta a sinistra delle sue voci invece che sopra:
-                  un'etichetta su riga propria per ognuno dei tre costa tre
-                  righe di altezza per cella, che moltiplicate per sei righe
-                  sono lo schermo intero. */}
-              <span
-                className="etichetta shrink-0 pt-1"
-                style={{ width: 76, color: 'var(--wda-bright)' }}
-              >
-                {o.etichetta}
-              </span>
-              <div className="flex flex-wrap gap-1.5 min-w-0">
-                {dellOrizzonte.map((v) => (
-                  <Post key={v.id} voce={v} />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-        {/* Chi ha scritto nel futuro senza scegliere quando. Non si perde. */}
-        {senzaQuando.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {senzaQuando.map((v) => (
-              <Post key={v.id} voce={v} />
-            ))}
-          </div>
-        )}
+      <div className="p-1.5 flex flex-col gap-1" style={stile}>
+        {ORIZZONTI_QUADRO.map((o) => (
+          <ZonaRilascio
+            key={o.chiave}
+            riga={riga}
+            colonna="FUTURO"
+            orizzonte={o.chiave}
+            etichetta={o.etichetta}
+            voci={voci.filter((v) => v.orizzonte === o.chiave)}
+            // Un orizzonte vuoto è un bersaglio solo mentre si trascina. A
+            // riposo sparisce: tre righe di «—» per ognuna delle sei righe
+            // sono la differenza fra una mappa che sta in uno schermo e una
+            // che sta in due.
+            soloSePienaOInTrascinamento
+          />
+        ))}
+        {/* Chi ha scritto nel futuro senza dire quando. Non si perde, e resta
+            una zona valida: si può anche togliere l'orizzonte a una carta. */}
+        <ZonaRilascio
+          riga={riga}
+          colonna="FUTURO"
+          etichetta="senza data"
+          voci={voci.filter((v) => !v.orizzonte)}
+          soloSePiena
+        />
+        {/* Quando la casella è del tutto vuota e nessuno sta trascinando resta
+            solo questo: una riga, che dice cosa manca. */}
+        {voci.length === 0 && <VuotoFuturo />}
       </div>
     );
   }
 
   return (
-    <div className="px-3 py-2 flex flex-wrap gap-1.5 content-start" style={stile}>
-      {voci.map((v) => (
-        <Post key={v.id} voce={v} />
-      ))}
+    <div className="p-1.5" style={stile}>
+      <ZonaRilascio riga={riga} colonna={colonna} voci={voci} />
     </div>
   );
 }
 
 /**
- * Una voce sul tavolo. Pastiglia a capo automatico, non riga di lista: cinque
- * servizi impilati facevano una cella alta 250px, e con sei righe così il
- * quadro finiva per metà sotto il bordo dello schermo. In verde e firmate
- * quelle scritte in sala, perché la cosa che vale la pena vedere da tre metri
- * è cosa si è aggiunto adesso rispetto a com'era stamattina.
+ * Una casella su cui si può lasciare cadere una carta.
+ *
+ * `dragover` va sempre annullato, anche quando non si vuole evidenziare nulla:
+ * senza `preventDefault` il browser rifiuta il rilascio e la carta torna
+ * indietro con l'animazione dello «no», che si legge come un errore
+ * dell'applicazione invece che come un divieto voluto.
  */
-function Post({ voce }: { voce: VoceQuadro }) {
-  const { nome } = useStore();
-  const nuova = voce.autoreId !== SEME;
+function ZonaRilascio({
+  riga,
+  colonna,
+  orizzonte,
+  etichetta,
+  voci,
+  soloSePiena,
+  soloSePienaOInTrascinamento,
+}: {
+  riga: RigaQuadro;
+  colonna: ColonnaQuadro;
+  orizzonte?: OrizzonteQuadro;
+  etichetta?: string;
+  voci: VoceQuadro[];
+  soloSePiena?: boolean;
+  soloSePienaOInTrascinamento?: boolean;
+}) {
+  const { invia } = useStore();
+  const trascino = useContext(CtxTrascino);
+  const [sopra, setSopra] = useState(false);
+
+  if (voci.length === 0) {
+    if (soloSePiena) return null;
+    if (soloSePienaOInTrascinamento && !trascino.attivo) return null;
+  }
+
+  const lascia = (e: React.DragEvent) => {
+    e.preventDefault();
+    setSopra(false);
+    trascino.imposta(false);
+    const id = e.dataTransfer.getData('text/plain');
+    if (!id) return;
+    invia('quadro.sposta', { id, riga, colonna, ...(orizzonte ? { orizzonte } : {}) });
+  };
+
+  const vuota = voci.length === 0;
 
   return (
-    <span
-      className="inline-flex items-baseline gap-2 px-2.5 py-1 text-[14px] leading-snug"
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!sopra) setSopra(true);
+      }}
+      onDragLeave={() => setSopra(false)}
+      onDrop={lascia}
+      className="flex gap-2 px-2 py-1.5 transition-colors"
       style={{
         borderRadius: 'var(--radius-sm)',
-        background: nuova ? 'var(--live-wash)' : 'var(--bg-raised)',
-        border: `1px solid ${nuova ? 'var(--live)' : 'var(--line)'}`,
-        color: 'var(--ink)',
+        minHeight: 40,
+        // Il tratteggio compare solo mentre si trascina sopra: una griglia di
+        // diciotto caselle tratteggiate a riposo sembra un modulo da compilare.
+        background: sopra ? 'var(--wda-wash)' : 'transparent',
+        outline: sopra ? '2px dashed var(--wda)' : '2px dashed transparent',
+        outlineOffset: -2,
+        alignItems: vuota ? 'center' : 'flex-start',
       }}
     >
-      {voce.testo}
-      {nuova && (
-        <span className="text-[12px] shrink-0" style={{ color: 'var(--live)' }}>
-          {nome(voce.autoreId)}
+      {etichetta && (
+        <span className="etichetta shrink-0 pt-1" style={{ width: 72, color: 'var(--wda-bright)' }}>
+          {etichetta}
         </span>
       )}
+      {vuota ? (
+        <span className="text-[13px]" style={{ color: sopra ? 'var(--wda-bright)' : 'var(--ink-faint)' }}>
+          {sopra ? 'lascia qui' : '—'}
+        </span>
+      ) : (
+        <div className="flex flex-wrap gap-1.5 min-w-0">
+          {voci.map((v) => (
+            <Carta key={v.id} voce={v} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Il segnaposto della casella futura ancora intatta. Una riga, non tre. */
+function VuotoFuturo() {
+  const trascino = useContext(CtxTrascino);
+  if (trascino.attivo) return null;
+  return (
+    <span className="text-[13px] px-2 py-1" style={{ color: 'var(--ink-faint)' }}>
+      da riempire
     </span>
+  );
+}
+
+/**
+ * Una carta sulla mappa. Si trascina in qualsiasi casella, e se ha un retro
+ * — le analisi dei competitor ce l'hanno — si apre con un clic.
+ *
+ * Pastiglia e non riquadro impilato: con cinque servizi in colonna le righe
+ * impilate facevano una cella alta 250px, e con sei righe così metà della
+ * mappa finiva sotto il bordo dello schermo proiettato.
+ */
+function Carta({ voce }: { voce: VoceQuadro }) {
+  const { nome } = useStore();
+  const trascino = useContext(CtxTrascino);
+  const [aperta, setAperta] = useState(false);
+  const [presa, setPresa] = useState(false);
+  const nuova = voce.autoreId !== SEME;
+  const haRetro = Boolean(voce.nota);
+
+  return (
+    <span className="relative inline-flex">
+      <span
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData('text/plain', voce.id);
+          e.dataTransfer.effectAllowed = 'move';
+          setPresa(true);
+          // Il retro aperto mentre si trascina resterebbe sospeso a mezz'aria
+          // sopra una carta che non c'è più in quel punto.
+          setAperta(false);
+          trascino.imposta(true);
+        }}
+        onDragEnd={() => {
+          setPresa(false);
+          trascino.imposta(false);
+        }}
+        onClick={() => haRetro && setAperta((x) => !x)}
+        role={haRetro ? 'button' : undefined}
+        tabIndex={haRetro ? 0 : undefined}
+        onKeyDown={(e) => {
+          if (haRetro && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            setAperta((x) => !x);
+          }
+        }}
+        className="inline-flex items-baseline gap-2 px-2.5 py-1 text-[14px] leading-snug select-none"
+        style={{
+          borderRadius: 'var(--radius-sm)',
+          background: aperta ? 'var(--wda-wash)' : nuova ? 'var(--live-wash)' : 'var(--bg-raised)',
+          border: `1px solid ${aperta ? 'var(--wda)' : nuova ? 'var(--live)' : 'var(--line)'}`,
+          color: 'var(--ink)',
+          cursor: haRetro ? 'pointer' : 'grab',
+          opacity: presa ? 0.4 : 1,
+          boxShadow: presa ? 'none' : 'var(--ombra-1)',
+        }}
+      >
+        {voce.testo}
+        {haRetro && (
+          <span className="text-[12px] shrink-0" style={{ color: 'var(--wda-bright)' }}>
+            {aperta ? '−' : '+'}
+          </span>
+        )}
+        {nuova && (
+          <span className="text-[12px] shrink-0" style={{ color: 'var(--live)' }}>
+            {nome(voce.autoreId)}
+          </span>
+        )}
+      </span>
+
+      {aperta && voce.nota && <Retro voce={voce} chiudi={() => setAperta(false)} />}
+    </span>
+  );
+}
+
+/** L'analisi dietro una carta competitor. Sovrapposta, non in linea: in linea
+ *  spingerebbe giù le cinque righe sotto e farebbe saltare la mappa. */
+function Retro({ voce, chiudi }: { voce: VoceQuadro; chiudi: () => void }) {
+  return (
+    <div
+      className="pannello absolute z-30 p-4 flex flex-col gap-3"
+      style={{
+        top: 'calc(100% + 6px)',
+        left: 0,
+        width: 460,
+        maxWidth: '46vw',
+        boxShadow: 'var(--ombra-3)',
+        borderColor: 'var(--wda)',
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-[15px]" style={{ fontWeight: 500 }}>
+          {voce.testo}
+        </span>
+        <button
+          className="etichetta shrink-0 px-2 py-1"
+          style={{ border: '1px solid var(--line-strong)', borderRadius: 'var(--radius-sm)' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            chiudi();
+          }}
+        >
+          chiudi
+        </button>
+      </div>
+      <p className="m-0 text-[14px]" style={{ color: 'var(--ink)' }}>
+        {voce.nota}
+      </p>
+      {voce.url && (
+        <span className="text-[12px] truncate" style={{ color: 'var(--ink-faint)' }}>
+          {voce.url}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -453,38 +695,155 @@ export function MQMano({ sessione }: { sessione: Sessione }) {
             </span>
           ) : (
             nellaCella.map((v) => (
-              <div key={v.id} className="rialzato p-3 flex items-start justify-between gap-3">
-                <div className="min-w-0 flex flex-col gap-1">
-                  <span className="text-[14px]">{v.testo}</span>
-                  {v.autoreId !== SEME && (
-                    <span className="text-[12px]" style={{ color: 'var(--ink-faint)' }}>
-                      {nome(v.autoreId)}
-                    </span>
+              <div key={v.id} className="rialzato p-3 flex flex-col gap-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex flex-col gap-1">
+                    <span className="text-[14px]">{v.testo}</span>
+                    {v.autoreId !== SEME && (
+                      <span className="text-[12px]" style={{ color: 'var(--ink-faint)' }}>
+                        {nome(v.autoreId)}
+                      </span>
+                    )}
+                  </div>
+                  {/* Si cancella solo quello che si è scritto. Togliere l'idea di
+                      un altro mentre la sta ancora spiegando è il modo più veloce
+                      per far smettere tutti di scrivere. */}
+                  {v.autoreId === io?.id && (
+                    <button
+                      className="bottone text-[13px] shrink-0"
+                      style={{ minHeight: 44, padding: '6px 12px' }}
+                      onClick={() => invia('quadro.rimuovi', { id: v.id })}
+                    >
+                      Togli
+                    </button>
                   )}
                 </div>
-                {/* Si cancella solo quello che si è scritto. Togliere l'idea di
-                    un altro mentre la sta ancora spiegando è il modo più veloce
-                    per far smettere tutti di scrivere. */}
-                {v.autoreId === io?.id && (
-                  <button
-                    className="bottone text-[13px] shrink-0"
-                    style={{ minHeight: 44, padding: '6px 12px' }}
-                    onClick={() => invia('quadro.rimuovi', { id: v.id })}
-                  >
-                    Togli
-                  </button>
-                )}
+                {v.nota && <Nota testo={v.nota} url={v.url} />}
               </div>
             ))
           )}
         </div>
 
+        {/* Il trascinamento non esiste su un telefono, ma il gesto sì: si
+            sceglie la casella qui sopra e si manda dentro una carta con un
+            tocco. Senza, riclassificare sarebbe una cosa che può fare solo chi
+            ha il portatile, e la mappa la muoverebbe una persona sola. */}
+        <SpostaQui riga={riga} colonna={colonna} orizzonte={orizzonte} />
+
         {mie > 0 && (
           <span className="etichetta">
-            hai messo {mie} {mie === 1 ? 'voce' : 'voci'} nel quadro
+            hai messo {mie} {mie === 1 ? 'carta' : 'carte'} sulla mappa
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+/** L'analisi dietro una carta, sul telefono: in linea e richiudibile. */
+function Nota({ testo, url }: { testo: string; url?: string }) {
+  const [aperta, setAperta] = useState(false);
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        className="etichetta self-start px-2 py-1"
+        style={{
+          border: '1px solid var(--line-strong)',
+          borderRadius: 'var(--radius-sm)',
+          minHeight: 36,
+          color: 'var(--wda-bright)',
+        }}
+        onClick={() => setAperta((x) => !x)}
+      >
+        {aperta ? 'chiudi analisi' : 'apri analisi'}
+      </button>
+      {aperta && (
+        <>
+          <p className="m-0 text-[13px]" style={{ color: 'var(--ink)' }}>
+            {testo}
+          </p>
+          {url && (
+            <span className="text-[12px] break-all" style={{ color: 'var(--ink-faint)' }}>
+              {url}
+            </span>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Manda una carta esistente nella casella scelta con i selettori qui sopra.
+ * Chiusa di default: aperta occuperebbe più spazio del modulo di scrittura,
+ * che resta il gesto principale del telefono.
+ */
+function SpostaQui({
+  riga,
+  colonna,
+  orizzonte,
+}: {
+  riga: RigaQuadro;
+  colonna: ColonnaQuadro;
+  orizzonte: OrizzonteQuadro;
+}) {
+  const { stato, invia } = useStore();
+  const [aperto, setAperto] = useState(false);
+
+  const quadro = stato?.quadro ?? [];
+  // Le carte già nella casella di destinazione non si mostrano: spostarle dove
+  // sono già è l'unico gesto che non fa niente, e in una lista lunga è anche
+  // l'unico che si prova per sbaglio.
+  const altrove = quadro.filter(
+    (v) => !(v.riga === riga && v.colonna === colonna && (colonna !== 'FUTURO' || v.orizzonte === orizzonte)),
+  );
+
+  const dove = `${RIGHE_QUADRO.find((r) => r.chiave === riga)?.etichetta} · ${
+    COLONNE_QUADRO.find((c) => c.chiave === colonna)?.etichetta
+  }${colonna === 'FUTURO' ? ` · ${ORIZZONTI_QUADRO.find((o) => o.chiave === orizzonte)?.etichetta}` : ''}`;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        className="bottone text-[14px] text-left"
+        style={{ minHeight: 48 }}
+        onClick={() => setAperto((x) => !x)}
+      >
+        {aperto ? 'Chiudi' : `Sposta una carta in «${dove}»`}
+      </button>
+
+      {aperto && (
+        <div className="flex flex-col gap-2">
+          {altrove.length === 0 ? (
+            <span className="text-[13px]" style={{ color: 'var(--ink-faint)' }}>
+              Non c’è nessun’altra carta sulla mappa.
+            </span>
+          ) : (
+            altrove.map((v) => (
+              <button
+                key={v.id}
+                className="bottone text-left flex flex-col items-start gap-1"
+                style={{ minHeight: 48 }}
+                onClick={() => {
+                  invia('quadro.sposta', {
+                    id: v.id,
+                    riga,
+                    colonna,
+                    ...(colonna === 'FUTURO' ? { orizzonte } : {}),
+                  });
+                  setAperto(false);
+                }}
+              >
+                <span className="text-[14px]">{v.testo}</span>
+                <span className="text-[12px]" style={{ color: 'var(--ink-faint)' }}>
+                  adesso in {RIGHE_QUADRO.find((r) => r.chiave === v.riga)?.etichetta} ·{' '}
+                  {COLONNE_QUADRO.find((c) => c.chiave === v.colonna)?.etichetta}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

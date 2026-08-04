@@ -343,6 +343,19 @@ export function applica(ctx: Contesto, azione: Action): void {
       return;
     }
 
+    case 'quadro.sposta': {
+      const v = state.quadro.find((x) => x.id === azione.payload.id);
+      if (!v) return;
+      v.riga = azione.payload.riga;
+      v.colonna = azione.payload.colonna;
+      // Uscendo dal futuro l'orizzonte va tolto, non lasciato lì: una carta in
+      // «cosa facciamo» che si porta dietro un «un giorno» è un residuo che
+      // ricompare appena qualcuno la rimette nel futuro.
+      if (azione.payload.colonna === 'FUTURO') v.orizzonte = azione.payload.orizzonte;
+      else delete v.orizzonte;
+      return;
+    }
+
     case 'quadro.rimuovi': {
       const i = state.quadro.findIndex((x) => x.id === azione.payload.id);
       if (i >= 0) state.quadro.splice(i, 1);

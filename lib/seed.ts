@@ -64,7 +64,6 @@ export function quadroIniziale(): VoceQuadro[] {
     ['SERVIZI', 'COMPETITOR', 'Boutique AI: più verticali e più economiche'],
 
     ['PRODOTTI', 'OGGI', 'Nessun prodotto ricorrente: tutto su commessa'],
-    ['PRODOTTI', 'COMPETITOR', 'Venture builder con portafoglio proprio'],
 
     ['MERCATO', 'OGGI', 'Corporate e PMI italiane, innovazione e AI'],
     ['MERCATO', 'COMPETITOR', 'Freelance senior con stack AI, costo marginale'],
@@ -76,9 +75,8 @@ export function quadroIniziale(): VoceQuadro[] {
     ['PARTNER', 'OGGI', 'Startup, investitori, vendor tecnologici'],
 
     ['REVENUE', 'OGGI', 'Prevalentemente a giornata e a progetto'],
-    ['REVENUE', 'COMPETITOR', 'Chi lavora a success fee o con equity'],
   ];
-  return voci.map(([riga, colonna, testo], i) => ({
+  const generiche: VoceQuadro[] = voci.map(([riga, colonna, testo], i) => ({
     id: `q-seed-${i + 1}`,
     riga,
     colonna,
@@ -86,7 +84,97 @@ export function quadroIniziale(): VoceQuadro[] {
     autoreId: 'seed',
     ts: 0,
   }));
+  return [...generiche, ...COMPETITOR_MAPPATI];
 }
+
+/**
+ * I quattro competitor mappati uno per uno, ciascuno sulla riga su cui preme
+ * davvero. Non stanno tutti in «servizi»: il punto della mappa è che ognuno
+ * attacca WDA da un lato diverso, e metterli in fila sotto un'unica voce
+ * «concorrenza» nasconde esattamente l'informazione che serve.
+ *
+ * Le carte si spostano: se al tavolo si decide che 20V preme sui clienti e non
+ * sul modello di ricavo, la si trascina e la mappa cambia.
+ */
+const COMPETITOR_MAPPATI: VoceQuadro[] = [
+  {
+    id: 'q-cp-aivb-servizi',
+    riga: 'SERVIZI',
+    colonna: 'COMPETITOR',
+    testo: 'AIVB — venture builder AI, MVP in 8–16 settimane',
+    nota:
+      'Si posiziona esplicitamente contro la consulenza: «non siamo una società di consulenza», e promette di trasformare l’innovation theater in business. Diagnosi AI gratuita come porta d’ingresso, poi costruzione della startup. Sei verticali dichiarati (real estate, salute e farma, education, moda e design, difesa, AI generale), Roma e Londra, clienti citati Larimart, Sielte, CY4Gate, ELT. Su cosa preme: l’MVP a data certa è la risposta al «quanto ci mettete» a cui una commessa consulenziale non risponde mai.',
+    url: 'https://aivb.ai/it/home-it/',
+    autoreId: 'seed',
+    ts: 0,
+  },
+  {
+    id: 'q-cp-aivb-revenue',
+    riga: 'REVENUE',
+    colonna: 'COMPETITOR',
+    testo: 'AIVB — equity invece che giornate',
+    nota:
+      'Non fattura il tempo: le società costruite diventano entità indipendenti in comproprietà con il partner. Per la divisione difesa ha aperto anche il crowdfunding. Su cosa preme: davanti a un cliente che confronta un preventivo a giornata con «paghiamo insieme e la costruiamo insieme», la giornata è la proposta che deve giustificarsi.',
+    url: 'https://aivb.ai/it/home-it/',
+    autoreId: 'seed',
+    ts: 0,
+  },
+  {
+    id: 'q-cp-20v-revenue',
+    riga: 'REVENUE',
+    colonna: 'COMPETITOR',
+    testo: '20V — work for equity notarile, in minoranza',
+    nota:
+      'Si dichiarano «gli unici venture builder italiani a entrare in minoranza con work for equity», formalizzato con atto notarile: il founder tiene il controllo. Sei aree di lavoro (strategia e modello, finanza e controllo, prodotto e tech, go-to-market, legale e societario, fundraising) e sei fasi, dallo scoring AI alla validazione dell’MVP. Il fondo 20 Ventures SGR, in costituzione, può co-investire dopo l’MVP. Risultati citati: Mnemonica, exit a circa 5M pre-money; Resrcle, da 1M a circa 3M pre-money. Su cosa preme: è la stessa competenza che vende WDA, pagata in quote invece che in fatture.',
+    url: 'https://20v.it/venture-building',
+    autoreId: 'seed',
+    ts: 0,
+  },
+  {
+    id: 'q-cp-20v-clienti',
+    riga: 'CLIENTI',
+    colonna: 'COMPETITOR',
+    testo: '20V — parla ai founder, non alle direzioni',
+    nota:
+      'Target dichiarato: founder e startup italiane pre-seed e seed, in B2B SaaS, foodtech, healthtech, economia circolare, AI. Su cosa preme: non toglie clienti corporate a WDA, toglie il tipo di lavoro. Se il talento operativo senior si può monetizzare in equity su startup, farlo su commessa corporate diventa una scelta, e va giustificata.',
+    url: 'https://20v.it/venture-building',
+    autoreId: 'seed',
+    ts: 0,
+  },
+  {
+    id: 'q-cp-vbai-prodotti',
+    riga: 'PRODOTTI',
+    colonna: 'COMPETITOR',
+    testo: 'Venture Builder AI — il metodo venduto come software',
+    nota:
+      'Piattaforma SaaS che struttura lo sviluppo d’impresa: costruzione del modello di business, spazio di lavoro condiviso fra startup e advisor, valutazione di maturità con framework KTH, generatore di pitch deck, ricerca di mercato AI, supporto alle candidature per i finanziamenti, pianificazione finanziaria. Freemium, piano gratuito illimitato nel tempo. Prevalenza scandinava. Su cosa preme: è la riga «prodotti» di WDA già occupata da qualcun altro. Fa a zero euro, in self-service, la parte di metodo che oggi WDA vende a giornata.',
+    url: 'https://vbai.io/',
+    autoreId: 'seed',
+    ts: 0,
+  },
+  {
+    id: 'q-cp-vento-partner',
+    riga: 'PARTNER',
+    colonna: 'COMPETITOR',
+    testo: 'Vento (Exor) — capitale e accesso che WDA non ha',
+    nota:
+      'Fondo pre-seed e seed nato nel 2022 dagli organizzatori dell’Italian Tech Week, con sede a Torino e Exor come unico LP. Ticket iniziale di 150k, follow-on fino a 1M, requisito almeno un founder italiano. Oltre 100 startup in portafoglio, secondo fondo da 75M. Su cosa preme: è l’unico dei quattro che non vende competenza ma capitale e rete, quindi è tanto un competitor quanto un possibile canale. La domanda per il tavolo non è «come lo battiamo», è «cosa portiamo noi che loro non hanno».',
+    url: 'https://www.vento.ventures/',
+    autoreId: 'seed',
+    ts: 0,
+  },
+  {
+    id: 'q-cp-vento-mercato',
+    riga: 'MERCATO',
+    colonna: 'COMPETITOR',
+    testo: 'Vento — nessun verticale, nessun confine',
+    nota:
+      'AI, SaaS, salute, fintech, consumer, clima, edtech, proptech, mobilità, food-agtech: non sceglie un verticale, sceglie i founder italiani ovunque si trovino. Su cosa preme: WDA si definisce oggi su «corporate e PMI italiane». Chi non ha un confine geografico non ha nemmeno il tetto di mercato che ne consegue.',
+    url: 'https://www.vento.ventures/',
+    autoreId: 'seed',
+    ts: 0,
+  },
+];
 
 export function statoIniziale(codiceStanza = CODICE_STANZA_DEFAULT): Store {
   return {

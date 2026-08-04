@@ -266,6 +266,14 @@ export interface VoceQuadro {
   ts: number;
   /** Valorizzato solo sulle voci in colonna FUTURO. */
   orizzonte?: OrizzonteQuadro;
+  /**
+   * Il dietro della carta. Sulle carte competitor porta l'analisi vera —
+   * posizionamento, modello di ricavo, su cosa preme davvero — che sul fronte
+   * non ci starebbe senza rendere la mappa illeggibile. Si apre con un clic.
+   */
+  nota?: string;
+  /** Da dove viene l'analisi, così è verificabile invece che da credere. */
+  url?: string;
 }
 
 export interface Store {

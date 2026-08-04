@@ -49,6 +49,9 @@ export type Action =
   // quello è riservato al facilitatore.
   | { type: 'quadro.aggiungi'; payload: { riga: RigaQuadro; colonna: ColonnaQuadro; testo: string; orizzonte?: OrizzonteQuadro } }
   | { type: 'quadro.modifica'; payload: { id: string; testo: string } }
+  // Spostare una carta è il gesto centrale della mappatura, non una modifica:
+  // si trascina dove va, e il testo resta quello di chi l'ha scritta.
+  | { type: 'quadro.sposta'; payload: { id: string; riga: RigaQuadro; colonna: ColonnaQuadro; orizzonte?: OrizzonteQuadro } }
   | { type: 'quadro.rimuovi'; payload: { id: string } }
   | { type: 'commit.set'; payload: { sessioneId: string; payload: CommitPayload } }
   | { type: 'commit.confirm'; payload: { sessioneId: string } }

@@ -274,6 +274,18 @@ export function verificaAzione(state: Store, pid: string, azione: Action): void 
     }
   }
 
+  // Spostare invece è di tutti, ed è una scelta, non una svista. Riclassificare
+  // le carte è l'esercizio: dire «questo per me non è un servizio, è un
+  // prodotto mancato» spostando la carta davanti a tutti vale più di dirlo a
+  // voce. Nessun testo viene perso e il gesto è reversibile in un secondo, il
+  // che è esattamente ciò che manca alla cancellazione.
+  if (azione.type === 'quadro.sposta') {
+    const p = azione.payload as { id: string };
+    if (!state.quadro.some((x) => x.id === p.id)) {
+      throw new ErroreGuardia(404, 'voce inesistente');
+    }
+  }
+
   if (azione.type === 'entity.delete') {
     const p = azione.payload as { tipo: string; id: string };
     if (p.tipo === 'competitor') {
